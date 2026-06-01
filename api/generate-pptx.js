@@ -52,14 +52,21 @@ export default async function handler(req, res) {
     align: 'left', valign: 'middle', margin: 0
   });
 
-  // Org name — big
-  const orgLabel = s.progname ? `${s.orgname}\n${s.progname}` : s.orgname;
-  cover.addText(orgLabel, {
-    x: 0.5, y: 1.5, w: 6.8, h: 2.0,
-    fontSize: s.orgname.length > 25 ? 30 : 38,
+  // Program name — big (primary)
+  cover.addText(s.progname || s.orgname, {
+    x: 0.5, y: 1.4, w: 6.8, h: 1.6,
+    fontSize: (s.progname||s.orgname).length > 25 ? 30 : 38,
     fontFace: 'Calibri', bold: true,
     color: 'FFFFFF', align: 'left', valign: 'middle', margin: 0
   });
+  // Org name — secondary below
+  if (s.progname) {
+    cover.addText(s.orgname, {
+      x: 0.5, y: 3.05, w: 6.8, h: 0.4,
+      fontSize: 14, fontFace: 'Calibri', italic: true,
+      color: 'CADCFC', align: 'left', valign: 'middle', margin: 0
+    });
+  }
 
   // Province tag
   cover.addShape(pres.shapes.ROUNDED_RECTANGLE, {
