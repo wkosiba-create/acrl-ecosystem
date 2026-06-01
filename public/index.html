@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlantic Ecosystem Mapping — L2M</title>
+<title>Innovation Ecosystem Mapping — L2M</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -61,7 +61,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .spin{width:14px;height:14px;border:2px solid #e5e5e5;border-top-color:#534AB7;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .map-container{padding:1.25rem;max-width:100%}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
 .stat-card{background:#f5f5f5;border-radius:8px;padding:10px 12px}
 .stat-label{font-size:11px;color:#666;margin-bottom:3px}
 .stat-val{font-size:22px;font-weight:500;color:#1a1a1a}
@@ -84,9 +84,16 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .live-badge{display:flex;align-items:center;gap:5px;font-size:12px;color:#1D9E75;font-weight:500}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.map-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.map-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px}
 .sm-btn{padding:6px 12px;font-size:12px;background:#fff;border:1px solid #d0d0d0;border-radius:7px;cursor:pointer;color:#555;display:inline-flex;align-items:center;gap:4px;transition:background 0.12s}
 .sm-btn:hover{background:#f0f0f0}
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap;padding:10px 12px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:8px}
+.filter-label{font-size:11px;font-weight:600;color:#555;white-space:nowrap}
+.prov-filter-btn{padding:4px 10px;font-size:11px;font-weight:500;border:1px solid #d0d0d0;border-radius:20px;background:#fff;color:#555;cursor:pointer;transition:all 0.12s;white-space:nowrap}
+.prov-filter-btn:hover{background:#f0f0f0}
+.prov-filter-btn.active{background:#534AB7;color:white;border-color:#534AB7}
+.filter-divider{width:1px;height:16px;background:#e5e5e5;flex-shrink:0}
+.filter-count{font-size:11px;color:#888;margin-left:auto;white-space:nowrap}
 .admin-view{padding:1.5rem}
 .dl-btn{padding:8px 16px;font-size:12px;font-weight:500;background:#534AB7;color:white;border:none;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background 0.15s}
 .dl-btn:hover{background:#3C3489}
@@ -94,8 +101,16 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .admin-table th{text-align:left;padding:7px 8px;font-size:10px;font-weight:600;color:#666;border-bottom:1px solid #e5e5e5;background:#f9f9f9;white-space:nowrap}
 .admin-table td{padding:7px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
 .admin-table tr:hover td{background:#fafafa}
+.admin-table tr.hidden-row td{opacity:0.4}
 .del-btn{padding:2px 8px;font-size:10px;color:#D85A30;background:transparent;border:1px solid #D85A30;border-radius:4px;cursor:pointer}
 .del-btn:hover{background:#FAECE7}
+.toggle-wrap{display:flex;align-items:center;gap:0}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:20px;cursor:pointer;transition:background 0.2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:white;border-radius:50%;transition:transform 0.2s}
+.toggle input:checked+.toggle-slider{background:#1D9E75}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px)}
 .pass-screen{max-width:300px;margin:3rem auto;text-align:center}
 .pass-screen h3{font-size:16px;font-weight:500;margin-bottom:1rem}
 .pass-screen input{margin-bottom:0.75rem}
@@ -122,13 +137,7 @@ const DIMS=[
   {id:'teamrl', label:'Team Readiness (TEAM-RL)',      short:'Team',       color:'F0997B'},
 ];
 const ACRL_DIMS=DIMS.filter(d=>d.id!=='trl');
-
-const TRL_DEFS={
-  1:'New Principles Observed',2:'Concept Formulated',3:'Proof of Concept',
-  4:'Component Validation (In Lab)',5:'Component Validation (In Relevant Environment)',
-  6:'System Prototype (In Relevant Environment)',7:'System Prototype (In Operational Environment)',
-  8:'System Qualified (In Operational Environment)',9:'System Deployed (In Operational Environment)'
-};
+const TRL_DEFS={1:'New Principles Observed',2:'Concept Formulated',3:'Proof of Concept',4:'Component Validation (In Lab)',5:'Component Validation (In Relevant Environment)',6:'System Prototype (In Relevant Environment)',7:'System Prototype (In Operational Environment)',8:'System Qualified (In Operational Environment)',9:'System Deployed (In Operational Environment)'};
 const ACRL_DEFS={
   frl:{1:'Institutional Support',2:'Discovery Funds',3:'Feasibility Funds',4:'Translational Funds',5:'Prototype Capital',6:'Validation Capital',7:'Pilot Capital',8:'Market Entry Capital',9:'Growth Capital'},
   brl:{1:'Scientific Discovery',2:'Concept Application',3:'Desktop Research',4:'Primary Market Research',5:'Business Model Refinement [Messy Middle]',6:'Business Model Refinement [Messy Middle]',7:'Commercial and Product Validation',8:'Pilots',9:'Recurring Sales'},
@@ -136,7 +145,6 @@ const ACRL_DEFS={
   mrl:{1:'Pre-Manufacturing',2:'Manufacturing Concept for Invention',3:'Ad-Hoc Fabrication',4:'Production Feasibility Assessed',5:'Pre-Production Process',6:'High-Fidelity Prototype Assembly',7:'Production Relevant Environment',8:'Low Rate Initial Production',9:'Full-Scale Production'},
   teamrl:{1:'Pure Academic Inquiry',2:'Research Unit',3:'Technical Execution',4:'Designated Commercial Lead',5:'Organizational Maturity & Readiness [Messy Middle]',6:'Organizational Maturity & Readiness [Messy Middle]',7:'Organizational Maturity & Readiness [Messy Middle]',8:'Executive Leadership Transition & Governance',9:'Executive Management'},
 };
-
 const ORG_TYPES=['Business Accelerator / Incubator (BAI)','Venture Capital (VC) Firm / Institutional Investor','Angel Network / Angel Investment Group','Technology Transfer / Commercialization Office (TTO)','Federal/Provincial Innovation Granting Agency or Program Administrator','Academic Research Lab / Post-Secondary Institute','Private Sector Corporation / Industry Stakeholder','Other'];
 const PROVINCES_ALL=['AB','BC','MB','NB','NL','NS','ON','PE','QC','SK','NT','NU','YT','National (Federal)'];
 const ROLES=['Executive Director / Director / Management','Program Manager / Coordinator','Principal Investigator (PI) / Faculty Researcher','Founder / SME Owner','Other'];
@@ -148,6 +156,7 @@ const DOT_COLORS=['#534AB7','#1D9E75','#D85A30','#D4537E','#378ADD','#639922','#
 const ADMIN_PASS='L2M2026';
 const API='/api';
 
+// ─── State ─────────────────────────────────────────────────────────────────
 let submissions=[];
 let currentView='survey';
 let submitted=false;
@@ -155,6 +164,13 @@ let lastSubmission=null;
 let adminAuthed=false;
 let liveTimer=null;
 
+// Map filter state — managed by admin, persisted in memory
+// hiddenIds: Set of submission IDs hidden from map
+// provFilter: null = all provinces, otherwise a province string
+let hiddenIds=new Set();
+let provFilter=null;
+
+// ─── API ───────────────────────────────────────────────────────────────────
 async function loadSubs(){
   try{const r=await fetch(`${API}/submissions`);submissions=await r.json();}
   catch(e){submissions=[];}
@@ -164,14 +180,39 @@ async function saveSub(sub){
   return (await r.json()).id;
 }
 async function deleteSub(id){
+  hiddenIds.delete(id);
   await fetch(`${API}/submissions?id=${id}`,{method:'DELETE'});
   await loadSubs();render();
 }
 async function clearAll(){
-  for(const s of submissions) await fetch(`${API}/submissions?id=${s.id}`,{method:'DELETE'});
-  submissions=[];render();
+  for(const s of submissions)await fetch(`${API}/submissions?id=${s.id}`,{method:'DELETE'});
+  submissions=[];hiddenIds=new Set();provFilter=null;render();
 }
 
+// ─── Visibility helpers ────────────────────────────────────────────────────
+function visibleSubs(){
+  return submissions.filter(s=>{
+    if(hiddenIds.has(s.id))return false;
+    if(provFilter&&s.province!==provFilter)return false;
+    return true;
+  });
+}
+function toggleVisibility(id){
+  if(hiddenIds.has(id))hiddenIds.delete(id);
+  else hiddenIds.add(id);
+  renderView();
+}
+function setAllVisible(v){
+  if(v)hiddenIds=new Set();
+  else submissions.forEach(s=>hiddenIds.add(s.id));
+  renderView();
+}
+function setProvFilter(prov){
+  provFilter=provFilter===prov?null:prov;
+  renderView();
+}
+
+// ─── Form helpers ──────────────────────────────────────────────────────────
 function makeCheckItem(name,value,label,isRadio){
   const t=isRadio?'radio':'checkbox';
   const sid=`ci_${name}_${value.replace(/\W/g,'_').substring(0,30)}`;
@@ -258,23 +299,19 @@ function renderSurvey(){
       </div>
     </div></div>`;
   }
-
   return `<div class="view">
     <div style="margin-bottom:1.25rem">
-      <div class="workshop-badge">Atlantic Ecosystem Mapping — June 4, 2026</div>
+      <div class="workshop-badge">Innovation Ecosystem Mapping Exercise</div>
     </div>
-
     <div class="disclaimer">
       <strong>Welcome!</strong> There are no wrong answers here. Your responses are just meant to kick off today's discussion. They will be used to automatically build a summary slide that you'll get to present to the group — so keep it clear, concise, and ready to share.
     </div>
 
     <div class="section-header">Section 1 — Organization &amp; program details</div>
-
     <div class="field">
       <label class="label">Organization name <span class="req">*</span></label>
       <input type="text" id="f_orgname" placeholder="e.g. Dalhousie University">
     </div>
-
     <div class="field">
       <label class="label">Program / offering name <span class="req">*</span></label>
       <input type="text" id="f_progname" placeholder="e.g. Lab2Market Validate">
@@ -282,7 +319,6 @@ function renderSurvey(){
         If your organization manages multiple offerings, please isolate one primary program dedicated to research commercialization to evaluate today.
       </div>
     </div>
-
     <div class="field">
       <label class="label">Primary province / territory of operation <span class="req">*</span></label>
       <select id="f_province">
@@ -290,25 +326,21 @@ function renderSurvey(){
         ${PROVINCES_ALL.map(p=>`<option value="${p}">${p}</option>`).join('')}
       </select>
     </div>
-
     <div class="field">
       <label class="label">Your primary role / title <span class="req">*</span></label>
       <div class="check-grid">${ROLES.map(r=>makeCheckItem('role',r,r,true)).join('')}</div>
       <div class="other-input" id="other_role"><input type="text" id="f_role_other" placeholder="Please specify your role..."></div>
     </div>
-
     <div class="field">
       <label class="label">Institutional structure <span class="req">*</span></label>
       <div class="check-grid">${ORG_TYPES.map(t=>makeCheckItem('orgtype',t,t,true)).join('')}</div>
       <div class="other-input" id="other_orgtype"><input type="text" id="f_orgtype_other" placeholder="Please describe your institutional structure..."></div>
     </div>
-
     <div class="field">
       <label class="label">Institutional affiliation <span style="color:#888;font-size:11px;font-weight:400">(select all that apply)</span></label>
       <div class="check-grid">${AFFILIATIONS.map(a=>makeCheckItem('affil',a,a,false)).join('')}</div>
       <div class="other-input" id="other_affil"><input type="text" id="f_affil_other" placeholder="Please describe your affiliation..."></div>
     </div>
-
     <div class="field">
       <label class="label">Funding sources / revenue models supporting this program <span style="color:#888;font-size:11px;font-weight:400">(select all that apply)</span></label>
       <div class="check-grid">${FUNDING_SRCS.map(f=>makeCheckItem('funding',f,f,false)).join('')}</div>
@@ -316,7 +348,6 @@ function renderSurvey(){
     </div>
 
     <div class="section-header">Section 2 — Operational mechanics &amp; offerings</div>
-
     <div class="field">
       <label class="label">Intake methodology <span class="req">*</span></label>
       <div class="radio-group">
@@ -328,7 +359,6 @@ function renderSurvey(){
         </div>
       </div>
     </div>
-
     <div class="field">
       <label class="label">Program structure <span class="req">*</span></label>
       <div class="radio-group">
@@ -344,24 +374,20 @@ function renderSurvey(){
         <input type="number" id="f_duration" min="1" max="120" placeholder="e.g. 6" style="width:120px">
       </div>
     </div>
-
     <div class="field">
       <label class="label">Program offerings provided directly to participants <span style="color:#888;font-size:11px;font-weight:400">(select all that apply)</span></label>
       <div class="check-grid">${OFFERINGS.map(o=>makeCheckItem('offerings',o,o,false)).join('')}</div>
       <div class="other-input" id="other_offerings"><input type="text" id="f_offerings_other" placeholder="Please describe other offerings..."></div>
     </div>
-
     <div class="field">
       <label class="label">Sector focus <span style="color:#888;font-size:11px;font-weight:400">(select all that apply)</span></label>
       <div class="check-grid">${SECTORS.map(s=>makeCheckItem('sectors',s,s,false)).join('')}</div>
     </div>
 
     <div class="section-header">Section 3 — Readiness level framework</div>
-
     <div class="disclaimer neutral">
       Please refer to the provided session materials for more detailed information on the different readiness levels.
     </div>
-
     <div class="field">
       <label class="label">Technology Readiness Level (TRL) continuum for your specified program / offering <span style="color:#888;font-size:11px;font-weight:400">— select to see definitions</span></label>
       <div class="trl-row">
@@ -369,7 +395,6 @@ function renderSurvey(){
         ${trlSelect('f_trl_exit','Expected / average TRL at exit')}
       </div>
     </div>
-
     <div class="field">
       <label class="label">Academic Commercialization Readiness Levels (ACRL) for your specified program / offering</label>
       <p style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5">Check each dimension your program maps against and specify entry and exit levels. <strong>Not all dimensions need to be selected</strong> — only include those that directly pertain to your program or offering.</p>
@@ -377,17 +402,14 @@ function renderSurvey(){
     </div>
 
     <div class="section-header">Section 4 — Qualitative insights</div>
-
     <div class="field">
       <label class="label">Other than TRLs, please indicate any other criteria you look at when selecting candidates for your program / offering</label>
       <textarea id="f_selection" placeholder="e.g. team composition, technology viability, market size, IP status, sector focus..."></textarea>
     </div>
-
     <div class="field">
       <label class="label">Is anything missing from the ACRL framework that your program supports and should be captured?</label>
       <textarea id="f_missing" placeholder="Share any gaps, additional dimensions, or aspects of your program not captured by the current framework..."></textarea>
     </div>
-
     <div class="field">
       <label class="label">Key Performance Indicators (KPIs): How does your program measure success?</label>
       <textarea id="f_kpis" placeholder="e.g. number of companies funded, revenue generated, patents filed, jobs created..."></textarea>
@@ -425,12 +447,9 @@ async function submitForm(){
     orgname,progname,province,
     role,role_other:document.getElementById('f_role_other')?.value||'',
     orgtype,orgtype_other:document.getElementById('f_orgtype_other')?.value||'',
-    affiliations:getChecked('affil'),
-    funding:getChecked('funding'),
-    intake,structure,
-    duration:document.getElementById('f_duration')?.value||'',
-    offerings:getChecked('offerings'),
-    sectors:getChecked('sectors'),
+    affiliations:getChecked('affil'),funding:getChecked('funding'),
+    intake,structure,duration:document.getElementById('f_duration')?.value||'',
+    offerings:getChecked('offerings'),sectors:getChecked('sectors'),
     trl_min:document.getElementById('f_trl_min')?.value||'',
     trl_exit:document.getElementById('f_trl_exit')?.value||'',
     acrl:acrlData,
@@ -476,18 +495,26 @@ async function downloadPptx(subData){
 
 // ─── Map ───────────────────────────────────────────────────────────────────
 function renderMap(){
-  const all=submissions;
+  const all=visibleSubs();
+  const totalSubs=submissions.length;
+  const hiddenCount=totalSubs-all.length;
   const acrlSubs=all.filter(s=>s.acrl&&Object.keys(s.acrl).length>0);
   const trlSubs=all.filter(s=>s.trl_min||s.trl_exit);
-  const provinces=[...new Set(all.map(s=>s.province))].length;
+  const allProvs=[...new Set(submissions.map(s=>s.province).filter(Boolean))].sort();
+
   const maxHeat=Math.max(1,...DIMS.map(dim=>{
     if(dim.id==='trl')return Math.max(...[1,2,3,4,5,6,7,8,9].map(lv=>all.filter(s=>s.trl_min&&s.trl_exit&&parseInt(s.trl_min)<=lv&&parseInt(s.trl_exit)>=lv).length));
     return Math.max(...[1,2,3,4,5,6,7,8,9].map(lv=>all.filter(s=>s.acrl&&s.acrl[dim.id]&&parseInt(s.acrl[dim.id].entry||0)<=lv&&parseInt(s.acrl[dim.id].exit||9)>=lv).length));
   }));
+
   function cellOrgs(dim,lv){
     if(dim.id==='trl')return all.filter(s=>s.trl_min&&s.trl_exit&&parseInt(s.trl_min)<=lv&&parseInt(s.trl_exit)>=lv);
     return all.filter(s=>s.acrl&&s.acrl[dim.id]&&parseInt(s.acrl[dim.id].entry||0)<=lv&&parseInt(s.acrl[dim.id].exit||9)>=lv);
   }
+
+  // Dot color index based on full submissions list (consistent across filters)
+  function dotColor(s){const idx=submissions.indexOf(s);return DOT_COLORS[idx%DOT_COLORS.length];}
+
   return `<div class="map-container">
     <div class="map-toolbar">
       <div style="font-size:15px;font-weight:600">Innovation Ecosystem — Live Map</div>
@@ -496,12 +523,22 @@ function renderMap(){
         <button class="sm-btn" onclick="loadSubs().then(renderView)"><i class="ti ti-refresh" style="font-size:13px"></i> Refresh</button>
       </div>
     </div>
+
+    ${allProvs.length>0?`<div class="filter-bar">
+      <span class="filter-label"><i class="ti ti-filter" style="font-size:12px;vertical-align:-1px"></i> Province:</span>
+      <button class="prov-filter-btn ${!provFilter?'active':''}" onclick="setProvFilter(null)">All</button>
+      ${allProvs.map(p=>`<button class="prov-filter-btn ${provFilter===p?'active':''}" onclick="setProvFilter('${p}')">${p}</button>`).join('')}
+      <div class="filter-divider"></div>
+      <span class="filter-count">Showing <strong>${all.length}</strong> of <strong>${totalSubs}</strong>${hiddenCount>0?` (${hiddenCount} hidden by admin)`:''}</span>
+    </div>`:''}
+
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Organizations</div><div class="stat-val">${all.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Provinces/territories</div><div class="stat-val">${provinces}</div></div>
+      <div class="stat-card"><div class="stat-label">Showing</div><div class="stat-val">${all.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Provinces</div><div class="stat-val">${[...new Set(all.map(s=>s.province))].length}</div></div>
       <div class="stat-card"><div class="stat-label">With TRL data</div><div class="stat-val">${trlSubs.length}</div></div>
       <div class="stat-card"><div class="stat-label">ACRL responses</div><div class="stat-val">${acrlSubs.length}</div></div>
     </div>
+
     <div class="framework">
       <div class="fw-level-row">
         <div class="fw-level-hdr" style="text-align:left;padding-left:8px;font-size:9px">Level →</div>
@@ -515,18 +552,19 @@ function renderMap(){
         ${[1,2,3,4,5,6,7,8,9].map(lv=>{
           const orgs=cellOrgs(dim,lv);
           const alpha=orgs.length>0?Math.min(0.85,0.18+(orgs.length/maxHeat)*0.67):0;
-          const dots=orgs.slice(0,6).map(s=>{const idx=all.indexOf(s);return `<div class="org-dot" style="background:${DOT_COLORS[idx%DOT_COLORS.length]}" data-name="${s.orgname}${s.progname?' — '+s.progname:''}"></div>`;}).join('');
+          const dots=orgs.slice(0,6).map(s=>`<div class="org-dot" style="background:${dotColor(s)}" data-name="${s.orgname}${s.progname?' — '+s.progname:''}"></div>`).join('');
           const extra=orgs.length>6?`<div style="font-size:8px;color:#666;line-height:1">+${orgs.length-6}</div>`:'';
           return `<div class="fw-cell"><div class="heat-bg" style="background:#${dim.color};opacity:${alpha}"></div><div class="dot-wrap">${dots}${extra}</div></div>`;
         }).join('')}
       </div>`).join('')}
     </div>
+
     <div class="legend">
       <span style="font-size:10px;font-weight:600;color:#666;margin-right:4px">Programs:</span>
-      ${all.slice(0,14).map((s,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${DOT_COLORS[i%DOT_COLORS.length]}"></div><span>${s.progname||s.orgname}</span></div>`).join('')}
+      ${all.slice(0,14).map(s=>`<div class="leg-item"><div class="leg-dot" style="background:${dotColor(s)}"></div><span>${s.progname||s.orgname}</span></div>`).join('')}
       ${all.length>14?`<span style="font-size:10px;color:#888">+${all.length-14} more</span>`:''}
     </div>
-    ${all.length===0?`<div class="empty-map">No submissions yet — responses will appear here as attendees submit.</div>`:''}
+    ${all.length===0?`<div class="empty-map">${totalSubs>0?'No submissions match the current filters.':'No submissions yet — responses will appear here as attendees submit.'}</div>`:''}
   </div>`;
 }
 
@@ -541,38 +579,58 @@ function renderAdmin(){
       <p style="font-size:11px;color:#888;margin-top:1rem">Default password: L2M2026</p>
     </div></div>`;
   }
+
+  const shownCount=submissions.filter(s=>!hiddenIds.has(s.id)).length;
+
   return `<div class="admin-view">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
-      <div style="font-size:15px;font-weight:600">All submissions <span style="font-size:13px;font-weight:400;color:#666">(${submissions.length} total)</span></div>
+      <div style="font-size:15px;font-weight:600">All submissions <span style="font-size:13px;font-weight:400;color:#666">(${submissions.length} total · ${shownCount} shown on map)</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="sm-btn" onclick="loadSubs().then(renderView)"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
-        <button class="dl-btn" onclick="downloadCSV()"><i class="ti ti-download" style="font-size:13px"></i> Download CSV</button>
-        <button class="dl-btn" style="background:#D85A30" onclick="if(confirm('Clear ALL submissions? This cannot be undone.'))clearAll()">Clear all</button>
+        <button class="sm-btn" onclick="setAllVisible(true)" title="Show all on map"><i class="ti ti-eye" style="font-size:12px"></i> Show all</button>
+        <button class="sm-btn" onclick="setAllVisible(false)" title="Hide all from map"><i class="ti ti-eye-off" style="font-size:12px"></i> Hide all</button>
+        <button class="dl-btn" onclick="downloadCSV()"><i class="ti ti-download" style="font-size:13px"></i> CSV</button>
+        <button class="dl-btn" style="background:#D85A30" onclick="if(confirm('Clear ALL submissions?'))clearAll()">Clear all</button>
       </div>
     </div>
+
+    <div style="font-size:11px;color:#888;margin-bottom:0.75rem;background:#F5F5F5;padding:8px 12px;border-radius:6px;border:1px solid #E5E5E5">
+      <i class="ti ti-info-circle" style="font-size:12px;vertical-align:-1px"></i>
+      Use the <strong>toggle</strong> on each row to show or hide that submission on the live map. Province filters on the map are independent and can be combined.
+    </div>
+
     ${submissions.length===0?`<div class="empty-map">No submissions yet.</div>`:`
     <div style="overflow-x:auto">
     <table class="admin-table">
       <thead><tr>
-        <th>#</th><th>Organization</th><th>Program</th><th>Province</th>
-        <th>TRL entry→exit</th><th>ACRL dims</th><th>Time</th><th>Slides</th><th></th>
+        <th>Map</th><th>#</th><th>Organization</th><th>Program</th><th>Province</th>
+        <th>TRL</th><th>ACRL dims</th><th>Time</th><th>Slides</th><th></th>
       </tr></thead>
       <tbody>
-      ${submissions.map((s,i)=>`<tr>
-        <td style="color:#888">${i+1}</td>
-        <td style="font-weight:500;max-width:120px">${s.orgname||'—'}</td>
-        <td style="font-size:11px;max-width:120px;color:#444">${s.progname||'—'}</td>
-        <td><span class="prov-tag">${s.province||'—'}</span></td>
-        <td style="font-size:11px">${s.trl_min?`TRL ${s.trl_min}→${s.trl_exit||'?'}`:'—'}</td>
-        <td style="font-size:10px">${Object.keys(s.acrl||{}).map(id=>DIMS.find(d=>d.id===id)?.short||id).join(', ')||'—'}</td>
-        <td style="font-size:10px;color:#888">${s.ts?new Date(s.ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</td>
-        <td>
-          <button class="pptx-dl-btn" id="pptx_${s.id}" onclick="downloadPptx(${JSON.stringify(s).replace(/"/g,'&quot;')})">
-            <i class="ti ti-download" style="font-size:10px"></i> .pptx
-          </button>
-        </td>
-        <td><button class="del-btn" onclick="if(confirm('Delete this entry?'))deleteSub(${s.id})">Del</button></td>
-      </tr>`).join('')}
+      ${submissions.map((s,i)=>{
+        const isVisible=!hiddenIds.has(s.id);
+        return `<tr class="${isVisible?'':'hidden-row'}">
+          <td>
+            <label class="toggle">
+              <input type="checkbox" ${isVisible?'checked':''} onchange="toggleVisibility(${s.id})">
+              <span class="toggle-slider"></span>
+            </label>
+          </td>
+          <td style="color:#888">${i+1}</td>
+          <td style="font-weight:500;max-width:110px">${s.orgname||'—'}</td>
+          <td style="font-size:11px;max-width:110px;color:#444">${s.progname||'—'}</td>
+          <td><span class="prov-tag">${s.province||'—'}</span></td>
+          <td style="font-size:11px;white-space:nowrap">${s.trl_min?`${s.trl_min}→${s.trl_exit||'?'}`:'—'}</td>
+          <td style="font-size:10px">${Object.keys(s.acrl||{}).map(id=>DIMS.find(d=>d.id===id)?.short||id).join(', ')||'—'}</td>
+          <td style="font-size:10px;color:#888;white-space:nowrap">${s.ts?new Date(s.ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</td>
+          <td>
+            <button class="pptx-dl-btn" id="pptx_${s.id}" onclick='downloadPptx(${JSON.stringify(s).replace(/'/g,"&#39;")})'>
+              <i class="ti ti-download" style="font-size:10px"></i> .pptx
+            </button>
+          </td>
+          <td><button class="del-btn" onclick="if(confirm('Delete this entry?'))deleteSub(${s.id})">Del</button></td>
+        </tr>`;
+      }).join('')}
       </tbody>
     </table></div>`}
   </div>`;
@@ -585,7 +643,7 @@ function checkPass(){
 }
 
 function downloadCSV(){
-  const headers=['ID','Org Name','Program Name','Province','Role','Org Type','Affiliations','Funding Sources','Intake','Structure','Duration (months)','Offerings','Sectors','TRL Entry','TRL Exit','ACRL Dimensions','ACRL Entry/Exit Detail','Selection Criteria','Missing Framework Elements','KPIs','Submitted At'];
+  const headers=['ID','Org Name','Program Name','Province','Role','Org Type','Affiliations','Funding Sources','Intake','Structure','Duration (months)','Offerings','Sectors','TRL Entry','TRL Exit','ACRL Dimensions','ACRL Entry/Exit Detail','Selection Criteria','Missing Framework Elements','KPIs','Submitted At','Shown on Map'];
   const rows=submissions.map(s=>[
     s.id,`"${(s.orgname||'').replace(/"/g,"'")}"`,`"${(s.progname||'').replace(/"/g,"'")}"`,
     s.province||'',`"${s.role||''}"`,`"${s.orgtype||''}"`,
@@ -596,7 +654,8 @@ function downloadCSV(){
     `"${Object.keys(s.acrl||{}).join('; ')}"`,
     `"${Object.entries(s.acrl||{}).map(([k,v])=>`${k}: entry ${v.entry||'?'} → exit ${v.exit||'?'}`).join('; ')}"`,
     `"${(s.selection||'').replace(/"/g,"'")}"`,`"${(s.missing||'').replace(/"/g,"'")}"`,
-    `"${(s.kpis||'').replace(/"/g,"'")}"`,`"${s.ts||''}"`
+    `"${(s.kpis||'').replace(/"/g,"'")}"`,`"${s.ts||''}"`,
+    hiddenIds.has(s.id)?'No':'Yes'
   ]);
   const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
@@ -606,7 +665,7 @@ function downloadCSV(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
-// ─── Nav & render loop ─────────────────────────────────────────────────────
+// ─── Nav & render ──────────────────────────────────────────────────────────
 function renderNav(){
   return `<div class="nav">
     <button class="nav-btn ${currentView==='survey'?'active':''}" onclick="switchView('survey')">Questionnaire</button>
