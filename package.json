@@ -1,0 +1,10 @@
+{
+  "name": "acrl-ecosystem-mapper",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node api/server-dev.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  }
+}
