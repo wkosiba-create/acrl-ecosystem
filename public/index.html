@@ -464,6 +464,12 @@ async function submitForm(){
 }
 function resetForm(){submitted=false;lastSubmission=null;render();}
 
+// Called from admin table — looks up submission by ID from loaded array
+function downloadPptxById(id){
+  const sub=submissions.find(s=>s.id===id);
+  if(sub)downloadPptx(sub);
+}
+
 async function downloadPptx(subData){
   const data=subData||lastSubmission;
   if(!data)return;
@@ -612,7 +618,7 @@ function renderAdmin(){
         return `<tr class="${isVisible?'':'hidden-row'}">
           <td>
             <label class="toggle">
-              <input type="checkbox" ${isVisible?'checked':''} onchange="toggleVisibility(${s.id})">
+              <input type="checkbox" ${isVisible?'checked':''} onchange="toggleVisibility('${s.id}')">
               <span class="toggle-slider"></span>
             </label>
           </td>
@@ -624,11 +630,11 @@ function renderAdmin(){
           <td style="font-size:10px">${Object.keys(s.acrl||{}).map(id=>DIMS.find(d=>d.id===id)?.short||id).join(', ')||'—'}</td>
           <td style="font-size:10px;color:#888;white-space:nowrap">${s.ts?new Date(s.ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</td>
           <td>
-            <button class="pptx-dl-btn" id="pptx_${s.id}" onclick='downloadPptx(${JSON.stringify(s).replace(/'/g,"&#39;")})'>
+            <button class="pptx-dl-btn" id="pptx_${s.id}" onclick="downloadPptxById('${s.id}')">
               <i class="ti ti-download" style="font-size:10px"></i> .pptx
             </button>
           </td>
-          <td><button class="del-btn" onclick="if(confirm('Delete this entry?'))deleteSub(${s.id})">Del</button></td>
+          <td><button class="del-btn" onclick="if(confirm('Delete this entry?'))deleteSub('${s.id}')">Del</button></td>
         </tr>`;
       }).join('')}
       </tbody>
