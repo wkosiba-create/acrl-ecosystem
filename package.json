@@ -1,9 +1,7 @@
 {
   "name": "acrl-ecosystem-mapper",
   "version": "1.0.0",
-  "scripts": {
-    "dev": "node api/server-dev.js"
-  },
+  "type": "module",
   "dependencies": {
     "pptxgenjs": "^4.0.1"
   }

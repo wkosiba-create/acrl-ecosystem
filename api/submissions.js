@@ -1,69 +1,46 @@
-// Vercel serverless function — /api/submissions
-// Uses Airtable for persistent storage
-// Reads credentials from Vercel environment variables:
-//   AIRTABLE_TOKEN  — Personal Access Token
-//   AIRTABLE_BASE   — Base ID (e.g. appXXXXXXXXXXXXXX)
-//   AIRTABLE_TABLE  — Table name (defaults to "Submissions")
-
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const AIRTABLE_BASE  = process.env.AIRTABLE_BASE;
 const AIRTABLE_TABLE = process.env.AIRTABLE_TABLE || 'Submissions';
 const AT_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}`;
-
-const atHeaders = {
-  'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-  'Content-Type': 'application/json'
-};
+const atHeaders = { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' };
 
 function fromAirtable(record) {
   const f = record.fields;
   let acrl = {};
   try { acrl = JSON.parse(f.acrl_detail || '{}'); } catch(e) {}
+  let frl_supports = [];
+  try { frl_supports = JSON.parse(f.frl_supports || '[]'); } catch(e) {}
   return {
-    id:           record.id,
-    orgname:      f.orgname      || '',
-    progname:     f.progname     || '',
-    province:     f.province     || '',
-    role:         f.role         || '',
-    orgtype:      f.orgtype      || '',
+    id: record.id,
+    orgname: f.orgname || '', progname: f.progname || '', province: f.province || '',
+    role: f.role || '', orgtype: f.orgtype || '',
     affiliations: f.affiliations ? f.affiliations.split(' | ') : [],
-    funding:      f.funding      ? f.funding.split(' | ')      : [],
-    intake:       f.intake       || '',
-    structure:    f.structure    || '',
-    duration:     f.duration     || '',
-    offerings:    f.offerings    ? f.offerings.split(' | ')    : [],
-    sectors:      f.sectors      ? f.sectors.split(' | ')      : [],
-    trl_min:      f.trl_min      || '',
-    trl_exit:     f.trl_exit     || '',
-    acrl,
-    selection:    f.selection    || '',
-    missing:      f.missing      || '',
-    kpis:         f.kpis         || '',
-    ts:           f.submitted_at || ''
+    funding: f.funding ? f.funding.split(' | ') : [],
+    intake: f.intake || '', structure: f.structure || '', duration: f.duration || '',
+    offerings: f.offerings ? f.offerings.split(' | ') : [],
+    sectors: f.sectors ? f.sectors.split(' | ') : [],
+    trl_min: f.trl_min || '', trl_exit: f.trl_exit || '',
+    acrl, frl_supports,
+    selection: f.selection || '', missing: f.missing || '', kpis: f.kpis || '',
+    ts: f.submitted_at || ''
   };
 }
 
 function toAirtable(sub) {
   return {
-    orgname:      sub.orgname      || '',
-    progname:     sub.progname     || '',
-    province:     sub.province     || '',
-    role:         sub.role         || '',
-    orgtype:      sub.orgtype      || '',
+    orgname: sub.orgname || '', progname: sub.progname || '', province: sub.province || '',
+    role: sub.role || '', orgtype: sub.orgtype || '',
     affiliations: (sub.affiliations || []).join(' | '),
-    funding:      (sub.funding      || []).join(' | '),
-    intake:       sub.intake       || '',
-    structure:    sub.structure    || '',
-    duration:     String(sub.duration || ''),
-    offerings:    (sub.offerings   || []).join(' | '),
-    sectors:      (sub.sectors     || []).join(' | '),
-    trl_min:      String(sub.trl_min  || ''),
-    trl_exit:     String(sub.trl_exit || ''),
-    acrl_dims:    Object.keys(sub.acrl || {}).join(', '),
-    acrl_detail:  JSON.stringify(sub.acrl || {}),
-    selection:    sub.selection    || '',
-    missing:      sub.missing      || '',
-    kpis:         sub.kpis         || '',
+    funding: (sub.funding || []).join(' | '),
+    intake: sub.intake || '', structure: sub.structure || '',
+    duration: String(sub.duration || ''),
+    offerings: (sub.offerings || []).join(' | '),
+    sectors: (sub.sectors || []).join(' | '),
+    trl_min: String(sub.trl_min || ''), trl_exit: String(sub.trl_exit || ''),
+    acrl_dims: Object.keys(sub.acrl || {}).join(', '),
+    acrl_detail: JSON.stringify(sub.acrl || {}),
+    frl_supports: JSON.stringify(sub.frl_supports || []),
+    selection: sub.selection || '', missing: sub.missing || '', kpis: sub.kpis || '',
     submitted_at: sub.ts || new Date().toISOString()
   };
 }
@@ -76,8 +53,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      let allRecords = [];
-      let offset = null;
+      let allRecords = [], offset = null;
       do {
         const url = offset ? `${AT_URL}?pageSize=100&offset=${offset}` : `${AT_URL}?pageSize=100`;
         const r = await fetch(url, { headers: atHeaders });
@@ -96,10 +72,7 @@ export default async function handler(req, res) {
     try {
       const sub = req.body;
       sub.ts = new Date().toISOString();
-      const r = await fetch(AT_URL, {
-        method: 'POST', headers: atHeaders,
-        body: JSON.stringify({ fields: toAirtable(sub) })
-      });
+      const r = await fetch(AT_URL, { method: 'POST', headers: atHeaders, body: JSON.stringify({ fields: toAirtable(sub) }) });
       if (!r.ok) { const err = await r.text(); return res.status(500).json({ error: 'Airtable create failed', detail: err }); }
       const data = await r.json();
       return res.status(201).json({ ok: true, id: data.id });
