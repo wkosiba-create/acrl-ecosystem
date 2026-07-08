@@ -24,7 +24,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .check-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #e5e5e5;border-radius:7px;cursor:pointer;background:#f9f9f9;user-select:none}
 .check-item:hover{background:#f0f0f0}
-.check-item input[type=checkbox],.check-item input[type=radio]{width:14px;height:14px;margin-top:1px;flex-shrink:0;accent-color:#534AB7}
+.check-item input[type=checkbox],.check-item input[type=radio]{width:14px;height:14px;margin-top:1px;flex-shrink:0;accent-color:#534AB7;pointer-events:none}
 .check-item label{font-size:12px;color:#1a1a1a;cursor:pointer;line-height:1.4;pointer-events:none}
 .check-item.sel{background:#EEEDFE;border-color:#AFA9EC}
 .radio-group{display:flex;flex-direction:column;gap:6px;margin-top:4px}
@@ -144,20 +144,22 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 <script>
 // ─── Constants ─────────────────────────────────────────────────────────────
 const DIMS=[
-  {id:'trl',    label:'Technology Readiness (TRL)',    short:'Tech / TRL', color:'97C459'},
   {id:'frl',    label:'Funding Readiness (FRL)',       short:'Funding',    color:'FAC775'},
+  {id:'trl',    label:'Technology Readiness (TRL)',    short:'Tech / TRL', color:'97C459'},
   {id:'brl',    label:'Business Readiness (BRL)',      short:'Business',   color:'5DCAA5'},
   {id:'iprl',   label:'IP Readiness (IP-RL)',          short:'IP',         color:'AFA9EC'},
   {id:'mrl',    label:'Manufacturing Readiness (MRL)', short:'Mfg',        color:'85B7EB'},
   {id:'teamrl', label:'Team Readiness (TEAM-RL)',      short:'Team',       color:'F0997B'},
 ];
-const ACRL_DIMS=DIMS.filter(d=>d.id!=='trl');
+// ACRL_DIMS = all dims for the questionnaire (FRL first, TRL included as ACRL-style block)
+const ACRL_DIMS=DIMS;
 // Dimensions that can be "supported by funding" (everything except TRL and FRL itself)
-const FRL_SUPPORT_DIMS=DIMS.filter(d=>d.id!=='trl'&&d.id!=='frl');
+const FRL_SUPPORT_DIMS=DIMS.filter(d=>d.id!=='frl'); // TRL now included as a supported dim
 
 const TRL_DEFS={1:'New Principles Observed',2:'Concept Formulated',3:'Proof of Concept',4:'Component Validation (In Lab)',5:'Component Validation (In Relevant Environment)',6:'System Prototype (In Relevant Environment)',7:'System Prototype (In Operational Environment)',8:'System Qualified (In Operational Environment)',9:'System Deployed (In Operational Environment)'};
 const ACRL_DEFS={
   frl:{1:'Institutional Support',2:'Discovery Funds',3:'Feasibility Funds',4:'Translational Funds',5:'Prototype Capital',6:'Validation Capital',7:'Pilot Capital',8:'Market Entry Capital',9:'Growth Capital'},
+  trl:{1:'New Principles Observed',2:'Concept Formulated',3:'Proof of Concept',4:'Component Validation (In Lab)',5:'Component Validation (In Relevant Environment)',6:'System Prototype (In Relevant Environment)',7:'System Prototype (In Operational Environment)',8:'System Qualified (In Operational Environment)',9:'System Deployed (In Operational Environment)'},
   brl:{1:'Scientific Discovery',2:'Concept Application',3:'Desktop Research',4:'Primary Market Research',5:'Business Model Refinement [Messy Middle]',6:'Business Model Refinement [Messy Middle]',7:'Commercial and Product Validation',8:'Pilots',9:'Recurring Sales'},
   iprl:{1:'New Knowledge',2:'Utility Formulated',3:'Invention',4:'IP Strategy Determined',5:'Claims Drafted',6:'Provisional Patent',7:'Non-Provisional PCT',8:'Commercial Clearance',9:'Portfolio Defense'},
   mrl:{1:'Pre-Manufacturing',2:'Manufacturing Concept for Invention',3:'Ad-Hoc Fabrication',4:'Production Feasibility Assessed',5:'Pre-Production Process',6:'High-Fidelity Prototype Assembly',7:'Production Relevant Environment',8:'Low Rate Initial Production',9:'Full-Scale Production'},
@@ -363,11 +365,9 @@ function renderSurvey(){
       <div class="check-grid">${SECTORS.map(s=>makeCheckItem('sectors',s,s,false)).join('')}</div></div>
 
     <div class="section-header">Section 3 — Readiness level framework</div>
-    <div class="disclaimer neutral">Please refer to the provided session materials for more detailed information on the different readiness levels.</div>
-    <div class="field"><label class="label">Technology Readiness Level (TRL) continuum for your specified program / offering</label>
-      <div class="trl-row">${trlSelect('f_trl_min','Minimum TRL required for entry')}${trlSelect('f_trl_exit','Expected / average TRL at exit')}</div></div>
+    <div class="disclaimer neutral" style="margin-bottom:1.1rem">Please refer to the provided session materials for more detailed information on the different readiness levels.</div>
     <div class="field">
-      <label class="label">Academic Commercialization Readiness Levels (ACRL) for your specified program / offering</label>
+      <label class="label">Readiness levels for your specified program / offering</label>
       <p style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5">Check each dimension your program maps against and specify entry and exit levels. <strong>Not all dimensions need to be selected</strong> — only include those that directly pertain to your program or offering.</p>
       ${ACRL_DIMS.map(d=>acrlDimBlock(d)).join('')}
     </div>
@@ -405,13 +405,15 @@ async function submitForm(){
     if(cb&&cb.checked){acrlData[d.id]={entry:document.getElementById(`acrl_entry_${d.id}`)?.value||'',exit:document.getElementById(`acrl_exit_${d.id}`)?.value||''};}
   });
   const frl_supports=acrlData.frl?getFrlSupports():[];
+  // TRL now stored inside acrl object like other dims
+  const trl_min=acrlData.trl?acrlData.trl.entry:'';
+  const trl_exit=acrlData.trl?acrlData.trl.exit:'';
   const sub={
     orgname,progname,province,role,orgtype,
     affiliations:getChecked('affil'),funding:getChecked('funding'),
     intake,structure,duration:document.getElementById('f_duration')?.value||'',
     offerings:getChecked('offerings'),sectors:getChecked('sectors'),
-    trl_min:document.getElementById('f_trl_min')?.value||'',
-    trl_exit:document.getElementById('f_trl_exit')?.value||'',
+    trl_min,trl_exit,
     acrl:acrlData,frl_supports,
     selection:document.getElementById('f_selection')?.value?.trim()||'',
     missing:document.getElementById('f_missing')?.value?.trim()||'',
@@ -483,9 +485,6 @@ function renderMap(){
       const dots=solidOrgs.slice(0,6).map(s=>`<div class="org-dot" style="background:${dotColor(s)}" data-name="${s.orgname}${s.progname?' — '+s.progname:''}"></div>`).join('');
       const extra=solidOrgs.length>6?`<div style="font-size:8px;color:#666">+${solidOrgs.length-6}</div>`:'';
       return `<div class="fw-cell"><div class="heat-bg" style="background:#${dim.color};opacity:${alpha}"></div><div class="dot-wrap">${dots}${extra}</div></div>`;
-    } else if(dim.id==='trl'){
-      // TRL not shown in funding view
-      return `<div class="fw-cell"><div class="heat-bg" style="opacity:0"></div><div class="dot-wrap"></div></div>`;
     } else {
       // Faded: funders whose FRL range covers this level AND who marked this dim as supported
       const fadedOrgs=displaySubs.filter(s=>{
@@ -502,7 +501,7 @@ function renderMap(){
   }
 
   // Which dims to show in funding view (hide TRL row, show FRL + supported dims)
-  const dimsToShow=fundingViewActive?DIMS.filter(d=>d.id!=='trl'):DIMS;
+  const dimsToShow=DIMS; // All dims shown in both views
 
   return `<div class="map-container">
     <div class="map-toolbar">
