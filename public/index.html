@@ -185,7 +185,8 @@ let adminAuthed=false;
 let liveTimer=null;
 let hiddenIds=new Set();
 let provFilter=null;
-let fundingViewActive=false;  // NEW: funding view toggle
+let subFilter=new Set();      // empty = show all; non-empty = show only selected IDs
+let fundingViewActive=false;  // funding view toggle
 
 // ─── API ───────────────────────────────────────────────────────────────────
 async function loadSubs(){
@@ -203,7 +204,7 @@ async function deleteSub(id){
 }
 async function clearAll(){
   for(const s of submissions)await fetch(`${API}/submissions?id=${s.id}`,{method:'DELETE'});
-  submissions=[];hiddenIds=new Set();provFilter=null;render();
+  submissions=[];hiddenIds=new Set();provFilter=null;subFilter=new Set();render();
 }
 
 // ─── Visibility ─────────────────────────────────────────────────────────────
@@ -211,6 +212,7 @@ function visibleSubs(){
   return submissions.filter(s=>{
     if(hiddenIds.has(s.id))return false;
     if(provFilter&&s.province!==provFilter)return false;
+    if(subFilter.size>0&&!subFilter.has(s.id))return false;
     return true;
   });
 }
@@ -223,6 +225,12 @@ function setAllVisible(v){
   renderView();
 }
 function setProvFilter(prov){provFilter=provFilter===prov?null:prov;renderView();}
+function toggleSubFilter(id){
+  if(subFilter.has(id))subFilter.delete(id);
+  else subFilter.add(id);
+  renderView();
+}
+function clearSubFilter(){subFilter=new Set();renderView();}
 function toggleFundingView(){fundingViewActive=!fundingViewActive;renderView();}
 
 // ─── Form helpers ──────────────────────────────────────────────────────────
@@ -479,24 +487,41 @@ function renderMap(){
 
     // Funding view
     if(dim.id==='frl'){
-      // Solid: funders operating at this level
+      // Solid: funders operating at this FRL level
       const solidOrgs=displaySubs.filter(s=>s.acrl&&s.acrl.frl&&parseInt(s.acrl.frl.entry||0)<=lv&&parseInt(s.acrl.frl.exit||9)>=lv);
       const alpha=solidOrgs.length>0?Math.min(0.85,0.18+(solidOrgs.length/Math.max(1,fundingSubs.length))*0.67):0;
       const dots=solidOrgs.slice(0,6).map(s=>`<div class="org-dot" style="background:${dotColor(s)}" data-name="${s.orgname}${s.progname?' — '+s.progname:''}"></div>`).join('');
       const extra=solidOrgs.length>6?`<div style="font-size:8px;color:#666">+${solidOrgs.length-6}</div>`:'';
       return `<div class="fw-cell"><div class="heat-bg" style="background:#${dim.color};opacity:${alpha}"></div><div class="dot-wrap">${dots}${extra}</div></div>`;
     } else {
-      // Faded: funders whose FRL range covers this level AND who marked this dim as supported
+      // Solid: funders who have this dim selected with direct resources AND their FRL range covers this level
+      const solidOrgs=displaySubs.filter(s=>{
+        if(!s.acrl||!s.acrl.frl||!s.acrl[dim.id])return false;
+        // Must not be in frl_supports (frl_supports = no direct resources)
+        if(s.frl_supports&&s.frl_supports.includes(dim.id))return false;
+        const frlEntry=parseInt(s.acrl.frl.entry||0);
+        const frlExit=parseInt(s.acrl.frl.exit||9);
+        const dimEntry=parseInt(s.acrl[dim.id].entry||0);
+        const dimExit=parseInt(s.acrl[dim.id].exit||9);
+        return frlEntry<=lv&&frlExit>=lv&&dimEntry<=lv&&dimExit>=lv;
+      });
+      // Faded: funders who marked this dim as supported but no direct resources, FRL range covers this level
       const fadedOrgs=displaySubs.filter(s=>{
         if(!s.acrl||!s.acrl.frl)return false;
         if(!(s.frl_supports&&s.frl_supports.includes(dim.id)))return false;
-        const entry=parseInt(s.acrl.frl.entry||0);
-        const exit=parseInt(s.acrl.frl.exit||9);
-        return entry<=lv&&exit>=lv;
+        const frlEntry=parseInt(s.acrl.frl.entry||0);
+        const frlExit=parseInt(s.acrl.frl.exit||9);
+        return frlEntry<=lv&&frlExit>=lv;
       });
-      const alpha=fadedOrgs.length>0?0.18:0;
-      const dots=fadedOrgs.slice(0,6).map(s=>`<div class="org-dot" style="background:${dotColor(s)};opacity:0.45" data-name="${s.orgname} (supports ${dim.short})"></div>`).join('');
-      return `<div class="fw-cell"><div class="heat-bg" style="background:#${dim.color};opacity:${alpha}"></div><div class="dot-wrap">${dots}</div></div>`;
+      const solidAlpha=solidOrgs.length>0?Math.min(0.85,0.18+(solidOrgs.length/Math.max(1,fundingSubs.length))*0.67):0;
+      const fadedAlpha=fadedOrgs.length>0&&solidOrgs.length===0?0.18:0;
+      const alpha=solidAlpha||fadedAlpha;
+      const allDots=[
+        ...solidOrgs.slice(0,6).map(s=>`<div class="org-dot" style="background:${dotColor(s)}" data-name="${s.orgname}${s.progname?' — '+s.progname:''}"></div>`),
+        ...fadedOrgs.slice(0,Math.max(0,6-solidOrgs.length)).map(s=>`<div class="org-dot" style="background:${dotColor(s)};opacity:0.4" data-name="${s.orgname} (supports ${dim.short}, no direct resources)"></div>`)
+      ];
+      const extra=(solidOrgs.length+fadedOrgs.length)>6?`<div style="font-size:8px;color:#666">+${(solidOrgs.length+fadedOrgs.length)-6}</div>`:'';
+      return `<div class="fw-cell"><div class="heat-bg" style="background:#${dim.color};opacity:${alpha}"></div><div class="dot-wrap">${allDots.join('')}${extra}</div></div>`;
     }
   }
 
@@ -513,7 +538,7 @@ function renderMap(){
     </div>
 
     <div class="view-mode-bar ${fundingViewActive?'funding-mode':''}">
-      <div class="view-mode-label">${fundingViewActive?'<i class="ti ti-coin" style="font-size:13px;vertical-align:-2px"></i> <strong>Funding view</strong> — showing only FRL submissions. Solid = direct funding support. Faded = intended support, no direct resources.':'<i class="ti ti-layout-grid" style="font-size:13px;vertical-align:-2px"></i> <strong>Standard view</strong> — showing all submissions across all dimensions.'}</div>
+      <div class="view-mode-label">${fundingViewActive?'<i class="ti ti-coin" style="font-size:13px;vertical-align:-2px"></i> <strong>Funding view</strong> — FRL submissions only. <strong>Dark</strong> = direct funding + resources provided. <strong>Light</strong> = funding intends to support but no additional resources provided.':'<i class="ti ti-layout-grid" style="font-size:13px;vertical-align:-2px"></i> <strong>Standard view</strong> — showing all submissions across all dimensions.'}</div>
       <button class="pill-btn ${fundingViewActive?'funding-active':''}" onclick="toggleFundingView()">
         ${fundingViewActive?'Exit funding view':'Switch to funding view'}
       </button>
@@ -525,6 +550,12 @@ function renderMap(){
       ${allProvs.map(p=>`<button class="pill-btn ${provFilter===p?'active':''}" onclick="setProvFilter('${p}')">${p}</button>`).join('')}
       <div class="filter-divider"></div>
       <span class="filter-count">Showing <strong>${displaySubs.length}</strong> of <strong>${totalSubs}</strong>${hiddenCount>0?` (${hiddenCount} hidden)`:''}</span>
+    </div>`:''}
+
+    ${allVisible.length>0?`<div class="filter-bar" style="flex-wrap:wrap;gap:6px">
+      <span class="filter-label"><i class="ti ti-building" style="font-size:12px;vertical-align:-1px"></i> Programs:</span>
+      <button class="pill-btn ${subFilter.size===0?'active':''}" onclick="clearSubFilter()">All</button>
+      ${allVisible.map(s=>`<button class="pill-btn ${subFilter.has(s.id)?'active':''}" onclick="toggleSubFilter('${s.id.replace(/'/g,"\\'")}')" title="${s.orgname}">${s.progname||s.orgname}</button>`).join('')}
     </div>`:''}
 
     <div class="stats-row">
