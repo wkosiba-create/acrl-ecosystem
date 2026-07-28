@@ -12,7 +12,7 @@ function fromAirtable(record) {
   try { frl_supports = JSON.parse(f.frl_supports || '[]'); } catch(e) {}
   return {
     id: record.id,
-    orgname: f.orgname || '', progname: f.progname || '', province: f.province || '',
+    orgname: f.orgname || '', progname: f.progname || '', province: f.province || '', provinces: f.provinces ? f.provinces.split(' | ') : (f.province ? [f.province] : []),
     role: f.role || '', orgtype: f.orgtype || '',
     affiliations: f.affiliations ? f.affiliations.split(' | ') : [],
     funding: f.funding ? f.funding.split(' | ') : [],
@@ -28,7 +28,7 @@ function fromAirtable(record) {
 
 function toAirtable(sub) {
   return {
-    orgname: sub.orgname || '', progname: sub.progname || '', province: sub.province || '',
+    orgname: sub.orgname || '', progname: sub.progname || '', province: (sub.provinces&&sub.provinces.length>0)?sub.provinces[0]:(sub.province||''), provinces: (sub.provinces||[sub.province].filter(Boolean)).join(' | '),
     role: sub.role || '', orgtype: sub.orgtype || '',
     affiliations: (sub.affiliations || []).join(' | '),
     funding: (sub.funding || []).join(' | '),

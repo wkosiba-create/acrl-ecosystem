@@ -184,8 +184,9 @@ let lastSubmission=null;
 let adminAuthed=false;
 let liveTimer=null;
 let hiddenIds=new Set();
-let provFilter=null;
+let provFilter=new Set();     // empty = all provinces; non-empty = show only selected
 let subFilter=new Set();      // empty = show all; non-empty = show only selected IDs
+let orgFilter=new Set();      // empty = all orgs; non-empty = show only selected org names
 let fundingViewActive=false;  // funding view toggle
 
 // ─── API ───────────────────────────────────────────────────────────────────
@@ -204,14 +205,21 @@ async function deleteSub(id){
 }
 async function clearAll(){
   for(const s of submissions)await fetch(`${API}/submissions?id=${s.id}`,{method:'DELETE'});
-  submissions=[];hiddenIds=new Set();provFilter=null;subFilter=new Set();render();
+  submissions=[];hiddenIds=new Set();provFilter=new Set();orgFilter=new Set();subFilter=new Set();render();
 }
 
 // ─── Visibility ─────────────────────────────────────────────────────────────
 function visibleSubs(){
   return submissions.filter(s=>{
     if(hiddenIds.has(s.id))return false;
-    if(provFilter&&s.province!==provFilter)return false;
+    // Province filter: submission must share at least one province with filter
+    if(provFilter.size>0){
+      const subProvs=s.provinces&&s.provinces.length>0?s.provinces:[s.province].filter(Boolean);
+      if(!subProvs.some(p=>provFilter.has(p)))return false;
+    }
+    // Org filter: match on orgname
+    if(orgFilter.size>0&&!orgFilter.has(s.orgname))return false;
+    // Submission filter
     if(subFilter.size>0&&!subFilter.has(s.id))return false;
     return true;
   });
@@ -224,10 +232,18 @@ function setAllVisible(v){
   if(v)hiddenIds=new Set();else submissions.forEach(s=>hiddenIds.add(s.id));
   renderView();
 }
-function setProvFilter(prov){provFilter=provFilter===prov?null:prov;renderView();}
+function toggleProvFilter(prov){
+  if(provFilter.has(prov))provFilter.delete(prov);else provFilter.add(prov);
+  renderView();
+}
+function clearProvFilter(){provFilter=new Set();renderView();}
+function toggleOrgFilter(org){
+  if(orgFilter.has(org))orgFilter.delete(org);else orgFilter.add(org);
+  renderView();
+}
+function clearOrgFilter(){orgFilter=new Set();renderView();}
 function toggleSubFilter(id){
-  if(subFilter.has(id))subFilter.delete(id);
-  else subFilter.add(id);
+  if(subFilter.has(id))subFilter.delete(id);else subFilter.add(id);
   renderView();
 }
 function clearSubFilter(){subFilter=new Set();renderView();}
@@ -339,8 +355,8 @@ function renderSurvey(){
       <input type="text" id="f_progname" placeholder="e.g. Lab2Market Validate">
       <div class="disclaimer warn" style="margin-top:8px;margin-bottom:0">If your organization manages multiple offerings, please isolate one primary program dedicated to research commercialization to evaluate today.</div>
     </div>
-    <div class="field"><label class="label">Primary province / territory of operation <span class="req">*</span></label>
-      <select id="f_province"><option value="">Select province or territory...</option>${PROVINCES_ALL.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></div>
+    <div class="field"><label class="label">Provinces and territories of operation <span class="req">*</span><span style="color:#888;font-size:11px;font-weight:400"> (select all that apply)</span></label>
+      <div class="check-grid" style="grid-template-columns:repeat(3,1fr)">${PROVINCES_ALL.map(p=>makeCheckItem('provinces',p,p,false)).join('')}</div></div>
     <div class="field"><label class="label">Your primary role / title <span class="req">*</span></label>
       <div class="check-grid">${ROLES.map(r=>makeCheckItem('role',r,r,true)).join('')}</div>
       <div class="other-input" id="other_role"><input type="text" id="f_role_other" placeholder="Please specify your role..."></div></div>
@@ -397,10 +413,10 @@ function renderSurvey(){
 async function submitForm(){
   const orgname=document.getElementById('f_orgname')?.value?.trim();
   const progname=document.getElementById('f_progname')?.value?.trim();
-  const province=document.getElementById('f_province')?.value;
+  const provinces=getChecked('provinces');
   const role=getRadio('role'),orgtype=getRadio('orgtype'),intake=getRadio('intake'),structure=getRadio('structure');
   const err=document.getElementById('form_err');
-  if(!orgname||!progname||!province||!role||!orgtype||!intake||!structure){
+  if(!orgname||!progname||provinces.length===0||!role||!orgtype||!intake||!structure){
     if(err)err.textContent='Please complete all required fields (marked with *) before submitting.';
     document.getElementById('form_err').scrollIntoView({behavior:'smooth',block:'center'});return;
   }
@@ -421,6 +437,8 @@ async function submitForm(){
     affiliations:getChecked('affil'),funding:getChecked('funding'),
     intake,structure,duration:document.getElementById('f_duration')?.value||'',
     offerings:getChecked('offerings'),sectors:getChecked('sectors'),
+    provinces:getChecked('provinces'),
+    province:getChecked('provinces')[0]||'', // keep for backwards compat display
     trl_min,trl_exit,
     acrl:acrlData,frl_supports,
     selection:document.getElementById('f_selection')?.value?.trim()||'',
@@ -455,7 +473,8 @@ function renderMap(){
   const allVisible=visibleSubs();
   const totalSubs=submissions.length;
   const hiddenCount=totalSubs-allVisible.length;
-  const allProvs=[...new Set(submissions.map(s=>s.province).filter(Boolean))].sort();
+  const allProvs=[...new Set(submissions.flatMap(s=>s.provinces&&s.provinces.length>0?s.provinces:[s.province||'']).filter(Boolean))].sort();
+  const allOrgs=[...new Set(submissions.map(s=>s.orgname).filter(Boolean))].sort();
 
   // Funding view: only submissions that selected FRL
   const fundingSubs=allVisible.filter(s=>s.acrl&&s.acrl.frl);
@@ -545,15 +564,21 @@ function renderMap(){
     </div>
 
     ${allProvs.length>0?`<div class="filter-bar">
-      <span class="filter-label"><i class="ti ti-filter" style="font-size:12px;vertical-align:-1px"></i> Province:</span>
-      <button class="pill-btn ${!provFilter?'active':''}" onclick="setProvFilter(null)">All</button>
-      ${allProvs.map(p=>`<button class="pill-btn ${provFilter===p?'active':''}" onclick="setProvFilter('${p}')">${p}</button>`).join('')}
+      <span class="filter-label"><i class="ti ti-map-pin" style="font-size:12px;vertical-align:-1px"></i> Province:</span>
+      <button class="pill-btn ${provFilter.size===0?'active':''}" onclick="clearProvFilter()">All</button>
+      ${allProvs.map(p=>`<button class="pill-btn ${provFilter.has(p)?'active':''}" onclick="toggleProvFilter('${p}')">${p}</button>`).join('')}
       <div class="filter-divider"></div>
       <span class="filter-count">Showing <strong>${displaySubs.length}</strong> of <strong>${totalSubs}</strong>${hiddenCount>0?` (${hiddenCount} hidden)`:''}</span>
     </div>`:''}
 
+    ${allOrgs.length>0?`<div class="filter-bar" style="flex-wrap:wrap;gap:6px">
+      <span class="filter-label"><i class="ti ti-building" style="font-size:12px;vertical-align:-1px"></i> Organization:</span>
+      <button class="pill-btn ${orgFilter.size===0?'active':''}" onclick="clearOrgFilter()">All</button>
+      ${allOrgs.map(org=>`<button class="pill-btn ${orgFilter.has(org)?'active':''}" onclick="toggleOrgFilter('${org.replace(/'/g,"\\'")}')">${org}</button>`).join('')}
+    </div>`:''}
+
     ${allVisible.length>0?`<div class="filter-bar" style="flex-wrap:wrap;gap:6px">
-      <span class="filter-label"><i class="ti ti-building" style="font-size:12px;vertical-align:-1px"></i> Programs:</span>
+      <span class="filter-label"><i class="ti ti-layout-grid" style="font-size:12px;vertical-align:-1px"></i> Program:</span>
       <button class="pill-btn ${subFilter.size===0?'active':''}" onclick="clearSubFilter()">All</button>
       ${allVisible.map(s=>`<button class="pill-btn ${subFilter.has(s.id)?'active':''}" onclick="toggleSubFilter('${s.id.replace(/'/g,"\\'")}')" title="${s.orgname}">${s.progname||s.orgname}</button>`).join('')}
     </div>`:''}
@@ -626,7 +651,7 @@ function renderAdmin(){
           <td style="color:#888">${i+1}</td>
           <td style="font-weight:500;max-width:100px">${s.orgname||'—'}</td>
           <td style="font-size:11px;max-width:100px;color:#444">${s.progname||'—'}</td>
-          <td><span class="prov-tag">${s.province||'—'}</span></td>
+          <td>${(s.provinces&&s.provinces.length>0?s.provinces:[s.province||'']).filter(Boolean).map(p=>`<span class="prov-tag" style="margin-right:2px">${p}</span>`).join('')||'—'}</td>
           <td style="font-size:11px;white-space:nowrap">${s.trl_min?`${s.trl_min}→${s.trl_exit||'?'}`:'—'}</td>
           <td style="font-size:10px">${Object.keys(s.acrl||{}).map(id=>DIMS.find(d=>d.id===id)?.short||id).join(', ')||'—'}</td>
           <td style="font-size:10px;color:#888">${(s.frl_supports||[]).map(id=>DIMS.find(d=>d.id===id)?.short||id).join(', ')||'—'}</td>
@@ -650,7 +675,7 @@ function downloadCSV(){
   const headers=['ID','Org Name','Program Name','Province','Role','Org Type','Affiliations','Funding Sources','Intake','Structure','Duration','Offerings','Sectors','TRL Entry','TRL Exit','ACRL Dimensions','ACRL Entry/Exit Detail','FRL Supports (no direct resources)','Selection Criteria','Missing Framework','KPIs','Submitted At','Shown on Map'];
   const rows=submissions.map(s=>[
     `"${s.id}"`,`"${(s.orgname||'').replace(/"/g,"'")}"`,`"${(s.progname||'').replace(/"/g,"'")}"`,
-    s.province||'',`"${s.role||''}"`,`"${s.orgtype||''}"`,
+    `"${(s.provinces&&s.provinces.length>0?s.provinces:[s.province||'']).filter(Boolean).join('; ')}"`,`"${s.role||''}"`,`"${s.orgtype||''}"`,
     `"${(s.affiliations||[]).join('; ')}"`,`"${(s.funding||[]).join('; ')}"`,
     s.intake||'',s.structure||'',s.duration||'',
     `"${(s.offerings||[]).join('; ')}"`,`"${(s.sectors||[]).join('; ')}"`,
