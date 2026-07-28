@@ -433,12 +433,13 @@ async function submitForm(){
   const trl_min=acrlData.trl?acrlData.trl.entry:'';
   const trl_exit=acrlData.trl?acrlData.trl.exit:'';
   const sub={
-    orgname,progname,province,role,orgtype,
+    orgname,progname,
+    provinces,
+    province:provinces[0]||'',
+    role,orgtype,
     affiliations:getChecked('affil'),funding:getChecked('funding'),
     intake,structure,duration:document.getElementById('f_duration')?.value||'',
     offerings:getChecked('offerings'),sectors:getChecked('sectors'),
-    provinces:getChecked('provinces'),
-    province:getChecked('provinces')[0]||'', // keep for backwards compat display
     trl_min,trl_exit,
     acrl:acrlData,frl_supports,
     selection:document.getElementById('f_selection')?.value?.trim()||'',
