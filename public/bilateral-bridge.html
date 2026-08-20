@@ -116,6 +116,8 @@ let state = {
   canvas: { jobs:"", pains:"", gains:"", capability:"", gapRelief:"", valueAdd:"", mechanism:"", dollarFigure:"", deliverable:"", timeline:"" },
   saveState: "idle",
   admin: { unlocked: false, pinInput: "", runs: [], loading: false, error: null },
+  showDeepDive: false,
+  copyStatus: null, // null | "copied" | "failed"
 };
 
 function bottleneck() {
@@ -124,12 +126,50 @@ function bottleneck() {
   return { key, value: min };
 }
 
+function buildDeepDivePrompt() {
+  const b = bottleneck();
+  const dim = DIMENSIONS.find(d => d.key === b.key);
+  const scoreLines = DIMENSIONS.map(d => {
+    const ev = state.evidence[d.key] ? ` — evidence: ${state.evidence[d.key]}` : " — no evidence recorded yet";
+    return `- ${d.key} (${d.full}): ${state.scores[d.key]}/9${ev}`;
+  }).join("\n");
+
+  const priorRec = state.aiRec
+    ? `\nA program-provided reference tool already suggested this starting point: "${state.aiRec.primaryMechanism || ""}" — ${state.aiRec.rationale || ""}\n`
+    : "";
+
+  return `I'm part of a deep tech venture participating in a Canada–Japan bilateral commercialization program. I'd like your help researching funding, partnership, and support programs relevant to our specific stage.
+
+VENTURE: ${state.team.venture || "Unnamed venture"}
+SECTOR: ${state.team.sector || "Not specified"}
+HOME INSTITUTION: ${state.team.institution || "Not specified"}
+
+OUR READINESS SCORES (1–9 scale across five dimensions, based on the ACRL/RCRL commercialization readiness framework):
+${scoreLines}
+
+OUR BOTTLENECK: ${dim.key} (${dim.full}) at ${b.value}/9 — this is our lowest-scoring dimension and caps our overall readiness.
+${priorRec}
+Please do a broad, current search and identify:
+1. Canadian and/or Japanese grants, funding programs, or accelerators that specifically address a ${dim.full.toLowerCase()} bottleneck at our stage (${b.value}/9) — not just general "innovation funding," but mechanisms actually suited to this specific gap.
+2. Any bilateral (Canada–Japan) mechanisms beyond the standard well-known ones (NSERC-JST, JETRO/TCS, Mitacs, JSPS, NRC IRAP, NEDO) that might apply to our sector specifically.
+3. For each option, note: eligibility basics, approximate funding amount or support type, and how time-sensitive it is (open deadline vs. rolling vs. currently closed).
+4. Flag anything that seems promising but that I should double-check for current accuracy, since programs and deadlines change.
+
+Please prioritize current, verifiable information over generic suggestions, and be explicit about your confidence level in anything you can't verify directly.`;
+}
+
 function getPath(obj, path) { return path.split(".").reduce((o,k)=>o&&o[k], obj); }
 function setPath(obj, path, val) {
   const parts = path.split(".");
   let o = obj;
   for (let i=0; i<parts.length-1; i++) o = o[parts[i]];
   o[parts[parts.length-1]] = val;
+}
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function radarSvg(scores, size) {
@@ -237,6 +277,18 @@ function renderStep2() {
     <div class="ai-box">
       <div class="tag">AI-ASSISTED RECOMMENDATION</div>
       ${aiHtml}
+    </div>
+    <div class="ai-box" style="background:#F5F5F5;border-color:#E4E4EC;">
+      <div class="tag" style="color:var(--navy);">WANT TO DIG DEEPER?</div>
+      <p class="mute small" style="margin:0 0 10px;">Generate a research prompt built from your team's actual scores and evidence — copy it into ChatGPT, Claude, or any AI assistant your team already has, for a broader search beyond the five reference mechanisms above.</p>
+      ${!state.showDeepDive ? `<button class="btn btn-outline" style="padding:6px 14px;font-size:12px;" data-action="toggleDeepDive">Generate research prompt</button>` : `
+        <textarea id="deepDiveText" readonly rows="10" style="width:100%;font-size:11.5px;font-family:monospace;margin-bottom:10px;background:#fff;">${escapeHtml(buildDeepDivePrompt())}</textarea>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="btn btn-purple" style="padding:6px 14px;font-size:12px;" data-action="copyDeepDivePrompt">Copy to clipboard</button>
+          <button class="btn btn-outline" style="padding:6px 14px;font-size:12px;" data-action="toggleDeepDive">Hide</button>
+          ${state.copyStatus === "copied" ? '<span class="small" style="color:#1BAF7A;font-weight:600;">Copied ✓</span>' : ""}
+          ${state.copyStatus === "failed" ? '<span class="small" style="color:var(--rose);">Couldn\'t copy automatically — select the text above and copy manually.</span>' : ""}
+        </div>`}
     </div>
     <div class="btn-row">
       <button class="btn btn-outline" data-action="goStep1">← Back</button>
@@ -397,6 +449,19 @@ document.getElementById("app").addEventListener("click", async (e) => {
   else if (action === "goStep2") { await saveRun(); state.page = 2; render(); if (!state.aiRec) getAiRecommendation(); }
   else if (action === "goStep3") { await saveRun(); state.page = 3; render(); }
   else if (action === "retryAi") { getAiRecommendation(); }
+  else if (action === "toggleDeepDive") { state.showDeepDive = !state.showDeepDive; state.copyStatus = null; render(); }
+  else if (action === "copyDeepDivePrompt") {
+    const text = buildDeepDivePrompt();
+    try {
+      await navigator.clipboard.writeText(text);
+      state.copyStatus = "copied";
+    } catch (err) {
+      state.copyStatus = "failed";
+      const ta = document.getElementById("deepDiveText");
+      if (ta) { ta.focus(); ta.select(); }
+    }
+    render();
+  }
   else if (action === "finish") { state.page = "done"; render(); await saveRun({ status: "Complete" }); render(); }
   else if (action === "refreshAdmin") { loadRuns(); }
   else if (action === "exitAdmin") { state.page = "landing"; render(); }
