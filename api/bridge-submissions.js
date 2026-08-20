@@ -1,4 +1,4 @@
-// api/submissions.js
+// api/bridge-submissions.js
 // GET  -> lists all submissions (used by the admin portal)
 // POST -> creates a new submission, or updates one if { recordId } is provided
 
@@ -20,13 +20,11 @@ function toAirtableFields(body) {
     IPRL: scores.IPRL ?? null,
     MRL: scores.MRL ?? null,
     TMRL: scores.TMRL ?? null,
-    FRL: scores.FRL ?? null,
     Evidence_TRL: evidence.TRL || "",
     Evidence_BRL: evidence.BRL || "",
     Evidence_IPRL: evidence.IPRL || "",
     Evidence_MRL: evidence.MRL || "",
     Evidence_TMRL: evidence.TMRL || "",
-    Evidence_FRL: evidence.FRL || "",
     Bottleneck: bottleneck || "",
     BottleneckLevel: bottleneckLevel ?? null,
     AI_PrimaryMechanism: aiRec.primaryMechanism || "",
@@ -47,7 +45,7 @@ function toAirtableFields(body) {
   };
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (!AIRTABLE_BASE_ID || !AIRTABLE_PAT) {
     res.status(500).json({ error: "Server is missing AIRTABLE_BASE_ID or AIRTABLE_PAT env vars." });
     return;
@@ -55,7 +53,6 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === "GET") {
-      // Paginate through all records
       let records = [];
       let offset;
       do {
@@ -104,4 +101,4 @@ module.exports = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+}

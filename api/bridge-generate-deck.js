@@ -1,7 +1,7 @@
-// api/generate-deck.js
+// api/bridge-generate-deck.js
 // GET ?id=recXXXXXXXXXXXXXX -> streams a 2-slide .pptx built from that Airtable record
 
-const pptxgen = require("pptxgenjs");
+import pptxgen from "pptxgenjs";
 
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME || "Submissions";
@@ -16,8 +16,8 @@ const ROSE_TINT = "FBEAF0";
 const GRAY = "6B6B78";
 const WHITE = "FFFFFF";
 
-const DIM_LABELS = { TRL: "TRL", BRL: "BRL", IPRL: "IP-RL", MRL: "MRL", TMRL: "TM-RL", FRL: "F-RL" };
-const DIM_ORDER = ["TRL", "BRL", "IPRL", "MRL", "TMRL", "FRL"];
+const DIM_LABELS = { TRL: "TRL", BRL: "BRL", IPRL: "IP-RL", MRL: "MRL", TMRL: "TM-RL" };
+const DIM_ORDER = ["TRL", "BRL", "IPRL", "MRL", "TMRL"];
 
 function safeName(s) {
   return (s || "team").replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "team";
@@ -29,8 +29,7 @@ function addHeaderBar(slide, title, subtitle) {
   slide.addText(subtitle, { x: 0.4, y: 0.62, w: 12.5, h: 0.35, fontFace: "Calibri", fontSize: 12, italic: true, color: "CADCFC", margin: 0 });
 }
 
-// f = Airtable record.fields
-function buildDeck(f) {
+export function buildDeck(f) {
   const pres = new pptxgen();
   pres.layout = "LAYOUT_WIDE";
 
@@ -123,7 +122,7 @@ function buildDeck(f) {
   return pres;
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const { id } = req.query || {};
   if (!id) {
     res.status(400).json({ error: "Missing ?id= (Airtable record ID)" });
@@ -149,6 +148,4 @@ module.exports = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
-
-module.exports.buildDeck = buildDeck; // exported for local testing only
+}

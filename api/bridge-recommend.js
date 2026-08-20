@@ -1,4 +1,4 @@
-// api/recommend.js
+// api/bridge-recommend.js
 // POST { venture, sector, scores, evidence, bottleneck } -> grounded mechanism recommendation
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -9,10 +9,9 @@ const DIMENSIONS = [
   { key: "IPRL", full: "IP Readiness", mechanism: "Tech-transfer-office bilateral agreements; FTO / patent support" },
   { key: "MRL", full: "Manufacturing Readiness", mechanism: "NRC IRAP (Canada) + NEDO (Japan) \u2014 applied industrial scale-up funding" },
   { key: "TMRL", full: "Team Readiness", mechanism: "Mitacs internships; JSPS fellowships for researcher exchange" },
-  { key: "FRL", full: "Funding Readiness", mechanism: "Canadian International Innovation Program; Innovation Partnership Program delegations" },
 ];
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
@@ -30,7 +29,7 @@ module.exports = async (req, res) => {
       .map((d) => `${d.key}=${scores[d.key]}/9${evidence[d.key] ? ` (evidence: ${evidence[d.key]})` : ""}`)
       .join(", ");
 
-    const system = `You are advising teams in a Canada-Japan deep tech commercialization program. Ventures score six ACRL dimensions 1-9. Their bottleneck (lowest score) caps overall readiness. Use ONLY the mechanisms in this reference table -- do not invent programs:\n${mechanismTable}\n\nRespond with ONLY valid JSON, no markdown fences, no preamble, in this exact shape:\n{"primaryMechanism": "string naming the mechanism tied to the bottleneck dimension", "rationale": "2-3 sentences on why this fits their specific stage, referencing their evidence", "secondaryConstraint": "the next-lowest dimension and a one-sentence note on watching it", "suggestedAsk": "one sentence modeling a specific, fundable ask they could bring to this mechanism"}`;
+    const system = `You are advising teams in a Canada-Japan deep tech commercialization program. Ventures score five ACRL dimensions 1-9. Their bottleneck (lowest score) caps overall readiness. Use ONLY the mechanisms in this reference table -- do not invent programs:\n${mechanismTable}\n\nRespond with ONLY valid JSON, no markdown fences, no preamble, in this exact shape:\n{"primaryMechanism": "string naming the mechanism tied to the bottleneck dimension", "rationale": "2-3 sentences on why this fits their specific stage, referencing their evidence", "secondaryConstraint": "the next-lowest dimension and a one-sentence note on watching it", "suggestedAsk": "one sentence modeling a specific, fundable ask they could bring to this mechanism"}`;
 
     const userMsg = `Venture: ${venture || "Unnamed venture"} (${sector || "sector not specified"})\nScores: ${scoreSummary}\nBottleneck: ${bottleneck}`;
 
@@ -64,4 +63,4 @@ module.exports = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+}
