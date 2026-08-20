@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bilateral Bridge — Capability Mapping &amp; Value Proposition Tool</title>
+<style>
+  :root {
+    --navy: #1E2761;
+    --purple: #5B3A8E;
+    --navy-tint: #EEF1FB;
+    --purple-tint: #F5F0FC;
+    --rose: #C24E6B;
+    --rose-tint: #FBEAF0;
+    --ink: #1A1A24;
+    --mute: #6B6B78;
+    --border: #D9D9E4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #FAFAFC;
+    font-family: -apple-system, "Segoe UI", Calibri, sans-serif;
+    color: var(--ink);
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px; }
+  header.app-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 24px; }
+  header.app-header h1 { font-family: Georgia, Cambria, serif; color: var(--navy); font-size: 22px; margin: 0 0 2px; }
+  header.app-header p { font-size: 12px; color: var(--mute); margin: 0; }
+  .admin-toggle {
+    font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--navy); background: #fff; color: var(--navy); cursor: pointer;
+  }
+  .admin-toggle.active { background: var(--navy); color: #fff; }
+  .card { background: #fff; border: 1px solid #ECECF2; border-radius: 12px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .stepper { display:flex; align-items:center; gap:8px; margin-bottom: 24px; }
+  .step-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; background:#E4E4EC; color:var(--mute); }
+  .step-dot.active, .step-dot.done { background: var(--navy); color:#fff; }
+  .step-label { font-size: 13px; font-weight: 600; color: var(--mute); }
+  .step-label.active { color: var(--navy); }
+  .step-line { flex:1; height:1px; background:#DEDEE8; min-width:24px; }
+  h2.step-title { font-family: Georgia, Cambria, serif; color: var(--navy); font-size: 18px; margin: 0 0 4px; }
+  p.step-sub { font-size: 13px; color: var(--mute); margin: 0 0 16px; }
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  label.field-label { display:block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  input[type=text], input[type=password], textarea {
+    width: 100%; font-size: 13px; border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px;
+    font-family: inherit; background:#fff; color: var(--ink);
+  }
+  textarea { resize: vertical; }
+  .score-card { background: var(--navy-tint); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .score-card .row { display:flex; align-items:center; justify-content:space-between; margin-bottom: 2px; }
+  .score-card .dim-key { font-weight: 700; font-size: 13px; color: var(--navy); }
+  .score-card .dim-val { font-family: monospace; font-weight: 700; font-size: 17px; color: var(--purple); }
+  .score-card .dim-full { font-size: 11px; color: var(--mute); margin-bottom: 8px; }
+  input[type=range] { width: 100%; accent-color: var(--purple); margin-bottom: 8px; }
+  .btn { font-weight: 600; font-size: 13px; border-radius: 8px; padding: 10px 18px; border: none; cursor: pointer; }
+  .btn-navy { background: var(--navy); color: #fff; }
+  .btn-purple { background: var(--purple); color: #fff; }
+  .btn-outline { background: #fff; border: 1px solid var(--navy); color: var(--navy); }
+  .btn-row { display:flex; justify-content: space-between; margin-top: 16px; }
+  .bottleneck-box { background: var(--rose-tint); border: 1px solid #F0CFDA; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+  .bottleneck-box .tag { font-size: 11px; font-weight: 700; color: var(--rose); margin-bottom: 2px; }
+  .bottleneck-box .title { font-size: 17px; font-weight: 700; }
+  .ai-box { background: var(--purple-tint); border: 1px solid #E3D6F4; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; }
+  .ai-box .tag { font-size: 11px; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+  .canvas-col { border-radius: 8px; padding: 16px; }
+  .canvas-col.partner { background: var(--navy-tint); }
+  .canvas-col.bring { background: var(--purple-tint); }
+  .canvas-col .col-title { font-size: 11px; font-weight: 700; margin-bottom: 10px; }
+  .canvas-col.partner .col-title { color: var(--navy); }
+  .canvas-col.bring .col-title { color: var(--purple); }
+  .ask-box { background: #FAFAFC; border: 1px solid #ECECF2; border-radius: 8px; padding: 14px; margin: 16px 0; }
+  .ask-box .ask-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  table.admin-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  table.admin-table th { background: var(--navy); color: #fff; text-align:left; padding: 6px 8px; }
+  table.admin-table td { padding: 6px 8px; border-bottom: 1px solid #ECECF2; }
+  table.admin-table tr:nth-child(even) td { background: #FAFAFC; }
+  a.download-link { background: var(--purple); color: #fff; text-decoration:none; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  .center { text-align: center; }
+  .mute { color: var(--mute); }
+  .small { font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app-header">
+    <div>
+      <h1>Bilateral Bridge</h1>
+      <p>Capability Mapping &amp; Value Proposition Tool · Canada–Japan Deep Tech Program</p>
+    </div>
+    <button class="admin-toggle" id="adminToggle">Data portal</button>
+  </header>
+  <div id="app"></div>
+</div>
+
+<script>
+const NAVY = "#1E2761", PURPLE = "#5B3A8E";
+const ADMIN_PIN = "2026"; // soft gate only, not real security
+
+const DIMENSIONS = [
+  { key: "TRL",  full: "Technology Readiness",   mechanism: "NSERC–JST joint research calls; bilateral research MOUs" },
+  { key: "BRL",  full: "Business Readiness",      mechanism: "JETRO + Canada's Trade Commissioner Service — market matchmaking" },
+  { key: "IPRL", full: "IP Readiness",            mechanism: "Tech-transfer-office bilateral agreements; FTO / patent support" },
+  { key: "MRL",  full: "Manufacturing Readiness", mechanism: "NRC IRAP (Canada) + NEDO (Japan) — applied industrial scale-up funding" },
+  { key: "TMRL", full: "Team Readiness",          mechanism: "Mitacs internships; JSPS fellowships for researcher exchange" },
+  { key: "FRL",  full: "Funding Readiness",       mechanism: "Canadian International Innovation Program; Innovation Partnership Program delegations" },
+];
+
+let state = {
+  page: "landing", // landing | 1 | 2 | 3 | done | admin
+  recordId: null,
+  team: { venture: "", lead: "", sector: "", institution: "" },
+  scores: Object.fromEntries(DIMENSIONS.map(d => [d.key, 3])),
+  evidence: Object.fromEntries(DIMENSIONS.map(d => [d.key, ""])),
+  aiLoading: false, aiError: null, aiRec: null,
+  canvas: { jobs:"", pains:"", gains:"", capability:"", gapRelief:"", valueAdd:"", mechanism:"", dollarFigure:"", deliverable:"", timeline:"" },
+  saveState: "idle",
+  admin: { unlocked: false, pinInput: "", runs: [], loading: false, error: null },
+};
+
+function bottleneck() {
+  let min = Infinity, key = null;
+  DIMENSIONS.forEach(d => { if (state.scores[d.key] < min) { min = state.scores[d.key]; key = d.key; } });
+  return { key, value: min };
+}
+
+function getPath(obj, path) { return path.split(".").reduce((o,k)=>o&&o[k], obj); }
+function setPath(obj, path, val) {
+  const parts = path.split(".");
+  let o = obj;
+  for (let i=0; i<parts.length-1; i++) o = o[parts[i]];
+  o[parts[parts.length-1]] = val;
+}
+
+function radarSvg(scores, size) {
+  size = size || 260;
+  const cx = size/2, cy = size/2, maxR = size/2 - 34;
+  const n = DIMENSIONS.length, step = (2*Math.PI)/n;
+  function pt(i, r) {
+    const a = -Math.PI/2 + i*step;
+    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+  }
+  let rings = "";
+  [3,6,9].forEach(v => {
+    const r = (v/9)*maxR;
+    const pts = DIMENSIONS.map((d,i)=>pt(i,r).join(",")).join(" ");
+    rings += `<polygon points="${pts}" fill="none" stroke="#D9D9E4" stroke-width="1"/>`;
+  });
+  let axes = "";
+  DIMENSIONS.forEach((d,i) => {
+    const [x,y] = pt(i, maxR);
+    axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#D9D9E4" stroke-width="1"/>`;
+  });
+  const dataPts = DIMENSIONS.map((d,i) => pt(i, (scores[d.key]/9)*maxR).join(",")).join(" ");
+  const labels = DIMENSIONS.map((d,i) => {
+    const [x,y] = pt(i, maxR + 16);
+    return `<text x="${x}" y="${y}" font-size="12" font-weight="700" fill="${NAVY}" text-anchor="middle" dominant-baseline="middle">${d.key}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${size} ${size}" width="100%" height="${size}">${rings}${axes}
+    <polygon points="${dataPts}" fill="${PURPLE}" fill-opacity="0.35" stroke="${PURPLE}" stroke-width="2"/>${labels}</svg>`;
+}
+
+function stepper(step) {
+  const steps = ["Diagnose","Route","Pitch"];
+  return `<div class="stepper">${steps.map((s,i)=>{
+    const n=i+1, active=n===step, done=n<step;
+    return `<div style="display:flex;align-items:center;gap:8px;">
+      <div class="step-dot ${active||done?'active':''}">${n}</div>
+      <span class="step-label ${active?'active':''}">${s}</span></div>
+      ${i<steps.length-1?'<div class="step-line"></div>':''}`;
+  }).join("")}</div>`;
+}
+
+// ---------- Page renderers ----------
+
+function renderLanding() {
+  return `
+  <div class="card center" style="padding:48px 24px;">
+    <div style="width:56px;height:56px;border-radius:50%;background:${NAVY};color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;margin:0 auto 18px;font-family:Georgia,serif;">→</div>
+    <h2 style="font-family:Georgia,serif;color:${NAVY};font-size:24px;margin:0 0 8px;">Diagnose. Route. Pitch.</h2>
+    <p class="mute small" style="max-width:420px;margin:0 auto 28px;">Score your six ACRL dimensions, get a bottleneck-matched bilateral mechanism, then draft your Bilateral Value Proposition — all in one pass.</p>
+    <button class="btn btn-purple" data-action="startNewRun">Start your team's session</button>
+  </div>`;
+}
+
+function renderStep1() {
+  const scoreCard = (d) => `
+    <div class="score-card">
+      <div class="row"><span class="dim-key">${d.key}</span><span class="dim-val">${state.scores[d.key]}<span style="font-size:11px;color:var(--mute);">/9</span></span></div>
+      <div class="dim-full">${d.full}</div>
+      <input type="range" min="1" max="9" step="1" value="${state.scores[d.key]}" data-bind="scores.${d.key}" data-type="number">
+      <input type="text" placeholder="Evidence artifact (what proves this level?)" value="${state.evidence[d.key]}" data-bind="evidence.${d.key}">
+    </div>`;
+  return `
+  <div class="card">
+    ${stepper(1)}
+    <h2 class="step-title">Step 1 — Diagnose</h2>
+    <p class="step-sub">Score each dimension honestly. Your bottleneck is the lowest score.</p>
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div><label class="field-label">Venture / project name</label><input type="text" data-bind="team.venture" value="${state.team.venture}"></div>
+      <div><label class="field-label">Sector</label><input type="text" data-bind="team.sector" value="${state.team.sector}"></div>
+    </div>
+    <div class="grid-2">
+      <div>${DIMENSIONS.slice(0,3).map(scoreCard).join("")}</div>
+      <div>${DIMENSIONS.slice(3).map(scoreCard).join("")}</div>
+    </div>
+    <div style="background:#FAFAFC;border-radius:8px;padding:12px;margin:8px 0 0;">${radarSvg(state.scores, 240)}</div>
+    <div class="btn-row" style="justify-content:flex-end;">
+      <button class="btn btn-navy" data-action="goStep2">See your bottleneck →</button>
+    </div>
+  </div>`;
+}
+
+function renderStep2() {
+  const b = bottleneck();
+  const dim = DIMENSIONS.find(d => d.key === b.key);
+  let aiHtml = "";
+  if (state.aiLoading) aiHtml = `<p class="mute small">Matching your scores to the bilateral funding map…</p>`;
+  else if (state.aiError) aiHtml = `<p class="small" style="color:var(--rose);">${state.aiError}</p><button class="btn btn-purple" style="padding:6px 14px;font-size:12px;" data-action="retryAi">Retry</button>`;
+  else if (state.aiRec) aiHtml = `
+    <p style="font-weight:700;margin:0 0 6px;">${state.aiRec.primaryMechanism || ""}</p>
+    <p class="mute" style="margin:0 0 8px;">${state.aiRec.rationale || ""}</p>
+    ${state.aiRec.secondaryConstraint ? `<p style="margin:0 0 8px;"><b>Also watch:</b> <span class="mute">${state.aiRec.secondaryConstraint}</span></p>` : ""}
+    ${state.aiRec.suggestedAsk ? `<p style="font-style:italic;color:${PURPLE};margin:0;">“${state.aiRec.suggestedAsk}”</p>` : ""}`;
+
+  return `
+  <div class="card">
+    ${stepper(2)}
+    <h2 class="step-title">Step 2 — Route</h2>
+    <p class="step-sub">Your bottleneck caps your effective readiness. Here's the mechanism built for it.</p>
+    <div style="background:#FAFAFC;border-radius:8px;padding:12px;margin-bottom:16px;">${radarSvg(state.scores, 240)}</div>
+    <div class="bottleneck-box">
+      <div class="tag">⚠ BOTTLENECK</div>
+      <div class="title">${dim.key} — ${dim.full} (${b.value}/9)</div>
+      <p class="mute small" style="margin:6px 0 0;">Reference mechanism: ${dim.mechanism}</p>
+    </div>
+    <div class="ai-box">
+      <div class="tag">AI-ASSISTED RECOMMENDATION</div>
+      ${aiHtml}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" data-action="goStep1">← Back</button>
+      <button class="btn btn-navy" data-action="goStep3">Draft your pitch →</button>
+    </div>
+  </div>`;
+}
+
+function renderStep3() {
+  const b = bottleneck();
+  const dim = DIMENSIONS.find(d => d.key === b.key);
+  const ta = (label, hint, path) => `
+    <label class="field-label">${label}</label>
+    <p class="mute" style="font-size:11px;margin:0 0 4px;">${hint}</p>
+    <textarea rows="2" data-bind="${path}">${getPath(state, path)}</textarea>`;
+  return `
+  <div class="card">
+    ${stepper(3)}
+    <h2 class="step-title">Step 3 — Pitch</h2>
+    <p class="step-sub">Draft your Bilateral Value Proposition: partner, mechanism, ask, deliverable.</p>
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="canvas-col partner">
+        <div class="col-title">YOUR PARTNER</div>
+        ${ta("Jobs","What are they trying to accomplish?","canvas.jobs")}
+        ${ta("Pains","What's blocking them today?","canvas.pains")}
+        ${ta("Gains","What would make this a clear win for them?","canvas.gains")}
+      </div>
+      <div class="canvas-col bring">
+        <div class="col-title">WHAT YOU BRING</div>
+        ${ta("Capability","Your core strength","canvas.capability")}
+        ${ta("Gap-relief","How it solves their specific pain","canvas.gapRelief")}
+        ${ta("Value-add","What's new that didn't exist before this pairing?","canvas.valueAdd")}
+      </div>
+    </div>
+    <div class="ask-box">
+      <div style="font-weight:700;font-size:12px;margin-bottom:10px;">THE JOINT ASK</div>
+      <div class="ask-grid">
+        <div><label class="field-label">Mechanism</label><input type="text" data-bind="canvas.mechanism" value="${state.canvas.mechanism}" placeholder="${dim.mechanism}"></div>
+        <div><label class="field-label">Dollar figure</label><input type="text" data-bind="canvas.dollarFigure" value="${state.canvas.dollarFigure}"></div>
+        <div><label class="field-label">Joint deliverable</label><input type="text" data-bind="canvas.deliverable" value="${state.canvas.deliverable}"></div>
+        <div><label class="field-label">Timeline</label><input type="text" data-bind="canvas.timeline" value="${state.canvas.timeline}"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" data-action="goStep2">← Back</button>
+      <button class="btn btn-purple" data-action="finish">Finish &amp; save →</button>
+    </div>
+  </div>`;
+}
+
+function renderDone() {
+  let msg = "";
+  if (state.saveState === "saving") msg = "Saving…";
+  else if (state.saveState === "saved") msg = "Your team's diagnosis, recommendation, and pitch are recorded.";
+  else if (state.saveState === "error") msg = "Saved locally, but the portal write failed — have a facilitator check the connection.";
+  return `
+  <div class="card center" style="padding:40px 24px;">
+    <p style="font-size:32px;margin:0 0 8px;">✓</p>
+    <h2 style="font-family:Georgia,serif;color:${NAVY};font-size:18px;margin:0 0 6px;">Saved to the program portal</h2>
+    <p class="mute small" style="margin:0 0 24px;">${msg}</p>
+    <button class="btn btn-navy" data-action="startNewRun">Start another team</button>
+  </div>`;
+}
+
+function renderAdminLogin() {
+  return `
+  <div class="card center" style="max-width:340px;margin:0 auto;">
+    <h2 style="font-family:Georgia,serif;color:${NAVY};font-size:18px;margin:0 0 8px;">Data portal</h2>
+    <p class="mute" style="font-size:11px;margin:0 0 16px;">Facilitator access only. This is a soft PIN gate, not real authentication — don't treat this as a secure record store.</p>
+    <input type="password" id="pinInput" placeholder="PIN" style="text-align:center;margin-bottom:10px;">
+    <button class="btn btn-navy" style="width:100%;" data-action="tryUnlock">Enter</button>
+  </div>`;
+}
+
+function renderAdminTable() {
+  const runs = state.admin.runs;
+  const counts = {};
+  runs.forEach(r => { counts[r.bottleneck] = (counts[r.bottleneck]||0) + 1; });
+
+  const summary = DIMENSIONS.map(d => `
+    <div style="text-align:center;background:#fff;border:1px solid #ECECF2;border-radius:6px;padding:8px 12px;min-width:64px;">
+      <div style="font-size:17px;font-weight:700;color:${PURPLE};">${counts[d.key]||0}</div>
+      <div style="font-size:10px;color:var(--mute);">${d.key} bottleneck</div>
+    </div>`).join("");
+
+  const rows = runs.map(r => `
+    <tr>
+      <td style="font-weight:700;">${r.team.venture || "—"}</td>
+      <td class="mute">${r.team.sector || "—"}</td>
+      ${DIMENSIONS.map(d => `<td style="text-align:center;${r.bottleneck===d.key?`color:${"#C24E6B"};font-weight:700;`:""}">${r.scores[d.key] ?? "—"}</td>`).join("")}
+      <td style="color:#C24E6B;font-weight:700;">${r.bottleneck || "—"}</td>
+      <td class="mute">${r.canvas.mechanism || "—"}</td>
+      <td class="mute">${r.status || "—"}</td>
+      <td class="mute">${r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "—"}</td>
+      <td><a class="download-link" href="/api/bridge-generate-deck?id=${r.id}">Download</a></td>
+    </tr>`).join("");
+
+  return `
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <h2 style="font-family:Georgia,serif;color:${NAVY};font-size:18px;margin:0;">All submissions (${runs.length})</h2>
+      <button class="btn btn-outline" style="padding:6px 14px;font-size:12px;" data-action="refreshAdmin">Refresh</button>
+    </div>
+    ${state.admin.loading ? '<p class="mute small">Loading…</p>' : ""}
+    ${state.admin.error ? `<p class="small" style="color:#C24E6B;">${state.admin.error}</p>` : ""}
+    ${!state.admin.loading && runs.length===0 ? '<p class="mute small">No team submissions yet. They\'ll appear here once a team finishes Step 1.</p>' : ""}
+    ${runs.length ? `
+      <div style="display:flex;flex-wrap:wrap;gap:10px;background:#FAFAFC;border-radius:8px;padding:12px;margin-bottom:14px;">${summary}</div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>Venture</th><th>Sector</th><th>TRL</th><th>BRL</th><th>IP-RL</th><th>MRL</th><th>TM-RL</th><th>F-RL</th><th>Bottleneck</th><th>Mechanism ask</th><th>Status</th><th>Updated</th><th>Deck</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>` : ""}
+    <div style="margin-top:14px;">
+      <button class="btn btn-outline" style="padding:6px 14px;font-size:12px;" data-action="exitAdmin">← Back to tool</button>
+    </div>
+  </div>`;
+}
+
+// ---------- Render dispatch ----------
+
+function render() {
+  const app = document.getElementById("app");
+  const toggle = document.getElementById("adminToggle");
+  toggle.classList.toggle("active", state.page === "admin");
+  toggle.textContent = state.page === "admin" ? "Exit portal" : "Data portal";
+
+  if (state.page === "landing") app.innerHTML = renderLanding();
+  else if (state.page === 1) app.innerHTML = renderStep1();
+  else if (state.page === 2) app.innerHTML = renderStep2();
+  else if (state.page === 3) app.innerHTML = renderStep3();
+  else if (state.page === "done") app.innerHTML = renderDone();
+  else if (state.page === "admin") app.innerHTML = state.admin.unlocked ? renderAdminTable() : renderAdminLogin();
+
+  attachBindings();
+}
+
+function attachBindings() {
+  document.querySelectorAll("[data-bind]").forEach(el => {
+    el.addEventListener("input", (e) => {
+      const path = e.target.getAttribute("data-bind");
+      let val = e.target.value;
+      if (e.target.getAttribute("data-type") === "number") val = Number(val);
+      setPath(state, path, val);
+      // Live-update the visible score number + radar without a full re-render on every keystroke of range inputs
+      if (path.startsWith("scores.")) render();
+    });
+  });
+}
+
+document.getElementById("app").addEventListener("click", async (e) => {
+  const action = e.target.getAttribute("data-action");
+  if (!action) return;
+
+  if (action === "startNewRun") { state.recordId = null; state.page = 1; render(); }
+  else if (action === "goStep1") { state.page = 1; render(); }
+  else if (action === "goStep2") { await saveRun(); state.page = 2; render(); if (!state.aiRec) getAiRecommendation(); }
+  else if (action === "goStep3") { await saveRun(); state.page = 3; render(); }
+  else if (action === "retryAi") { getAiRecommendation(); }
+  else if (action === "finish") { state.page = "done"; render(); await saveRun({ status: "Complete" }); render(); }
+  else if (action === "refreshAdmin") { loadRuns(); }
+  else if (action === "exitAdmin") { state.page = "landing"; render(); }
+  else if (action === "tryUnlock") {
+    const val = document.getElementById("pinInput").value;
+    if (val === ADMIN_PIN) { state.admin.unlocked = true; render(); loadRuns(); }
+  }
+});
+
+document.getElementById("adminToggle").addEventListener("click", () => {
+  state.page = state.page === "admin" ? "landing" : "admin";
+  render();
+});
+
+async function saveRun(extra) {
+  extra = extra || {};
+  state.saveState = "saving";
+  try {
+    const b = bottleneck();
+    const res = await fetch("/api/bridge-submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recordId: state.recordId,
+        team: state.team,
+        scores: state.scores,
+        evidence: state.evidence,
+        bottleneck: b.key,
+        bottleneckLevel: b.value,
+        aiRec: state.aiRec,
+        canvas: state.canvas,
+        status: extra.status || "In Progress",
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const saved = await res.json();
+    if (!state.recordId && saved.id) state.recordId = saved.id;
+    state.saveState = "saved";
+  } catch (e) {
+    state.saveState = "error";
+  }
+}
+
+async function getAiRecommendation() {
+  state.aiLoading = true; state.aiError = null; render();
+  try {
+    const b = bottleneck();
+    const res = await fetch("/api/bridge-recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ venture: state.team.venture, sector: state.team.sector, scores: state.scores, evidence: state.evidence, bottleneck: b.key }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    state.aiRec = await res.json();
+  } catch (e) {
+    state.aiError = "Couldn't reach the recommendation service. You can still proceed using the reference table below.";
+  } finally {
+    state.aiLoading = false; render();
+  }
+}
+
+async function loadRuns() {
+  state.admin.loading = true; state.admin.error = null; render();
+  try {
+    const res = await fetch("/api/bridge-submissions");
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    state.admin.runs = (data.records || []).map(r => {
+      const f = r.fields || {};
+      return {
+        id: r.id,
+        team: { venture: f.Venture, sector: f.Sector },
+        scores: { TRL: f.TRL, BRL: f.BRL, IPRL: f.IPRL, MRL: f.MRL, TMRL: f.TMRL, FRL: f.FRL },
+        bottleneck: f.Bottleneck,
+        canvas: { mechanism: f.Canvas_Mechanism },
+        status: f.Status,
+        updatedAt: r.createdTime,
+      };
+    }).sort((a,b) => (b.updatedAt||"").localeCompare(a.updatedAt||""));
+  } catch (e) {
+    state.admin.error = "Couldn't load submissions.";
+  } finally {
+    state.admin.loading = false; render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>

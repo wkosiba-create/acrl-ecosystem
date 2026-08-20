@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "pptxgenjs": "^4.0.1"
+    "pptxgenjs": "^4.0.1", "pptxgenjs": "^3.12.0"
   }
 }
