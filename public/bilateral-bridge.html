@@ -344,12 +344,18 @@ function renderDone() {
   if (state.saveState === "saving") msg = "Saving…";
   else if (state.saveState === "saved") msg = "Your team's diagnosis, recommendation, and pitch are recorded.";
   else if (state.saveState === "error") msg = "Saved locally, but the portal write failed — have a facilitator check the connection.";
+  const downloadBtn = state.recordId
+    ? `<a class="btn btn-purple" style="text-decoration:none;display:inline-block;" href="/api/bridge-generate-deck?id=${state.recordId}">Download your PowerPoint</a>`
+    : `<p class="small" style="color:var(--rose);">No record ID yet — the deck can't be generated until your submission saves successfully.</p>`;
   return `
   <div class="card center" style="padding:40px 24px;">
     <p style="font-size:32px;margin:0 0 8px;">✓</p>
     <h2 style="font-family:Georgia,serif;color:${NAVY};font-size:18px;margin:0 0 6px;">Saved to the program portal</h2>
     <p class="mute small" style="margin:0 0 24px;">${msg}</p>
-    <button class="btn btn-navy" data-action="startNewRun">Start another team</button>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      ${downloadBtn}
+      <button class="btn btn-navy" data-action="startNewRun">Start another team</button>
+    </div>
   </div>`;
 }
 
